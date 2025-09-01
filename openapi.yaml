@@ -1,5 +1,633 @@
 openapi: 3.0.0
 info:
   title: Split Budget Tracker API
+  description: |
+    A backend API for tracking shared expenses between two friends with double-entry ledger accounting.
+    
+    ## Key Features
+    - Double-entry ledger for mathematical consistency
+    - Equal splitting of group expenses
+    - Category-based budget tracking
+    - Idempotency support for reliable retries
+    - Banker's rounding to 2 decimal places
+    
+    ## Users
+    The system supports exactly two users: "A" and "B"
+    
+    ## Currency
+    All amounts are in SGD (Singapore Dollar)
+    
+    ## Idempotency
+    POST endpoints support optional `Idempotency-Key` header to prevent duplicate processing.
   version: 0.1.0
-paths: {}
+  license:
+    name: MIT
+  contact:
+    name: Split Budget Tracker Team
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Verify the application is running and responsive
+      responses:
+        '200':
+          description: Application is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-15T10:30:00.000Z"
+                  service:
+                    type: string
+                    example: "split-budget-tracker"
+                  version:
+                    type: string
+                    example: "0.1.0"
+
+  /users:
+    get:
+      summary: Get user summaries
+      description: Returns both users' wallet balances, budget spending by category, and net due amounts
+      responses:
+        '200':
+          description: User summaries retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSummary'
+                  netDue:
+                    $ref: '#/components/schemas/NetDue'
+              example:
+                users:
+                  - userId: "A"
+                    walletBalance: "450.00"
+                    budgetByCategory:
+                      food: "75.50"
+                      groceries: "120.00"
+                      transport: "45.25"
+                      entertainment: "30.00"
+                      other: "0.00"
+                  - userId: "B"
+                    walletBalance: "470.00"
+                    budgetByCategory:
+                      food: "75.50"
+                      groceries: "120.00"
+                      transport: "45.25"
+                      entertainment: "30.00"
+                      other: "0.00"
+                netDue:
+                  owes: "B"
+                  amount: "20.00"
+
+  /transactions:
+    get:
+      summary: List all transactions
+      description: Returns all group expenses and settlements in chronological order
+      responses:
+        '200':
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/GroupTransaction'
+                        - $ref: '#/components/schemas/Settlement'
+              example:
+                transactions:
+                  - id: "tx-001"
+                    type: "GROUP"
+                    createdAt: "2024-01-15T10:00:00.000Z"
+                    payerId: "A"
+                    amount: "100.00"
+                    category: "food"
+                    perUserShare: "50.00"
+                  - id: "settle-001"
+                    type: "SETTLEMENT"
+                    createdAt: "2024-01-15T11:00:00.000Z"
+                    fromUserId: "B"
+                    toUserId: "A"
+                    amount: "30.00"
+
+    post:
+      summary: Create group expense
+      description: Record a group expense paid by one user and split equally between both users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payerId
+                - amount
+                - category
+              properties:
+                payerId:
+                  type: string
+                  enum: ["A", "B"]
+                  description: ID of the user who paid the expense
+                amount:
+                  $ref: '#/components/schemas/Money'
+                  description: Total amount paid (will be split equally)
+                category:
+                  $ref: '#/components/schemas/Category'
+            example:
+              payerId: "A"
+              amount: "100.00"
+              category: "food"
+      responses:
+        '201':
+          description: Group expense created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transaction:
+                    $ref: '#/components/schemas/GroupTransaction'
+                  summary:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserSummary'
+                      netDue:
+                        $ref: '#/components/schemas/NetDue'
+              example:
+                transaction:
+                  id: "tx-001"
+                  type: "GROUP"
+                  createdAt: "2024-01-15T10:00:00.000Z"
+                  payerId: "A"
+                  amount: "100.00"
+                  category: "food"
+                  perUserShare: "50.00"
+                summary:
+                  users:
+                    - userId: "A"
+                      walletBalance: "450.00"
+                      budgetByCategory:
+                        food: "75.50"
+                        groceries: "120.00"
+                        transport: "45.25"
+                        entertainment: "30.00"
+                        other: "0.00"
+                    - userId: "B"
+                      walletBalance: "470.00"
+                      budgetByCategory:
+                        food: "75.50"
+                        groceries: "120.00"
+                        transport: "45.25"
+                        entertainment: "30.00"
+                        other: "0.00"
+                  netDue:
+                    owes: "B"
+                    amount: "20.00"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+
+  /settle:
+    post:
+      summary: Record settlement
+      description: Record a cash settlement between users (prevents over-settlement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fromUserId
+                - toUserId
+                - amount
+              properties:
+                fromUserId:
+                  type: string
+                  enum: ["A", "B"]
+                  description: User making the payment
+                toUserId:
+                  type: string
+                  enum: ["A", "B"]
+                  description: User receiving the payment
+                amount:
+                  $ref: '#/components/schemas/Money'
+                  description: Amount being settled
+            example:
+              fromUserId: "B"
+              toUserId: "A"
+              amount: "30.00"
+      responses:
+        '201':
+          description: Settlement recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settlement:
+                    $ref: '#/components/schemas/Settlement'
+                  summary:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserSummary'
+                      netDue:
+                        $ref: '#/components/schemas/NetDue'
+              example:
+                settlement:
+                  id: "settle-001"
+                  type: "SETTLEMENT"
+                  createdAt: "2024-01-15T11:00:00.000Z"
+                  fromUserId: "B"
+                  toUserId: "A"
+                  amount: "30.00"
+                summary:
+                  users:
+                    - userId: "A"
+                      walletBalance: "480.00"
+                      budgetByCategory:
+                        food: "75.50"
+                        groceries: "120.00"
+                        transport: "45.25"
+                        entertainment: "30.00"
+                        other: "0.00"
+                    - userId: "B"
+                      walletBalance: "440.00"
+                      budgetByCategory:
+                        food: "75.50"
+                        groceries: "120.00"
+                        transport: "45.25"
+                        entertainment: "30.00"
+                        other: "0.00"
+                  netDue:
+                    owes: "B"
+                    amount: "10.00"
+        '400':
+          $ref: '#/components/responses/OverSettlement'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+
+  /summary:
+    get:
+      summary: Get user dashboard
+      description: Get comprehensive summary for a specific user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["A", "B"]
+          description: User ID to get summary for
+      responses:
+        '200':
+          description: User summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/UserSummary'
+                  netDue:
+                    $ref: '#/components/schemas/NetDue'
+                  recentTransactions:
+                    type: array
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/GroupTransaction'
+                        - $ref: '#/components/schemas/Settlement'
+              example:
+                user:
+                  userId: "A"
+                  walletBalance: "450.00"
+                  budgetByCategory:
+                    food: "75.50"
+                    groceries: "120.00"
+                    transport: "45.25"
+                    entertainment: "30.00"
+                    other: "0.00"
+                netDue:
+                  owes: "B"
+                  amount: "20.00"
+                recentTransactions:
+                  - id: "tx-001"
+                    type: "GROUP"
+                    createdAt: "2024-01-15T10:00:00.000Z"
+                    payerId: "A"
+                    amount: "100.00"
+                    category: "food"
+                    perUserShare: "50.00"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /who-owes-who:
+    get:
+      summary: Get debt summary
+      description: Simple summary of who owes whom and how much
+      responses:
+        '200':
+          description: Debt summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetDue'
+              example:
+                owes: "B"
+                amount: "20.00"
+
+  /seed/demo:
+    post:
+      summary: Seed demo data
+      description: Create a sample scenario with initial balances and some transactions
+      responses:
+        '201':
+          description: Demo data created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  summary:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserSummary'
+                      netDue:
+                        $ref: '#/components/schemas/NetDue'
+              example:
+                message: "Demo data seeded successfully"
+                summary:
+                  users:
+                    - userId: "A"
+                      walletBalance: "450.00"
+                      budgetByCategory:
+                        food: "75.50"
+                        groceries: "120.00"
+                        transport: "45.25"
+                        entertainment: "30.00"
+                        other: "0.00"
+                    - userId: "B"
+                      walletBalance: "470.00"
+                      budgetByCategory:
+                        food: "75.50"
+                        groceries: "120.00"
+                        transport: "45.25"
+                        entertainment: "30.00"
+                        other: "0.00"
+                  netDue:
+                    owes: "B"
+                    amount: "20.00"
+
+components:
+  schemas:
+    Money:
+      type: string
+      pattern: '^\d+\.\d{2}$'
+      description: Amount in SGD with exactly 2 decimal places
+      example: "100.00"
+      minimum: 0.01
+      maximum: 1000000.00
+
+    Category:
+      type: string
+      enum:
+        - food
+        - groceries
+        - transport
+        - entertainment
+        - other
+      description: Expense category for budget tracking
+
+    GroupTransaction:
+      type: object
+      required:
+        - id
+        - type
+        - createdAt
+        - payerId
+        - amount
+        - category
+        - perUserShare
+      properties:
+        id:
+          type: string
+          description: Unique transaction identifier
+          example: "tx-001"
+        type:
+          type: string
+          enum: ["GROUP"]
+          description: Transaction type
+        createdAt:
+          type: string
+          format: date-time
+          description: When the transaction was created
+          example: "2024-01-15T10:00:00.000Z"
+        payerId:
+          type: string
+          enum: ["A", "B"]
+          description: User who paid the expense
+        amount:
+          $ref: '#/components/schemas/Money'
+          description: Total amount paid
+        category:
+          $ref: '#/components/schemas/Category'
+          description: Expense category
+        perUserShare:
+          $ref: '#/components/schemas/Money'
+          description: Amount each user owes (amount ÷ 2, rounded)
+
+    Settlement:
+      type: object
+      required:
+        - id
+        - type
+        - createdAt
+        - fromUserId
+        - toUserId
+        - amount
+      properties:
+        id:
+          type: string
+          description: Unique settlement identifier
+          example: "settle-001"
+        type:
+          type: string
+          enum: ["SETTLEMENT"]
+          description: Transaction type
+        createdAt:
+          type: string
+          format: date-time
+          description: When the settlement was created
+          example: "2024-01-15T11:00:00.000Z"
+        fromUserId:
+          type: string
+          enum: ["A", "B"]
+          description: User making the payment
+        toUserId:
+          type: string
+          enum: ["A", "B"]
+          description: User receiving the payment
+        amount:
+          $ref: '#/components/schemas/Money'
+          description: Amount being settled
+
+    UserSummary:
+      type: object
+      required:
+        - userId
+        - walletBalance
+        - budgetByCategory
+      properties:
+        userId:
+          type: string
+          enum: ["A", "B"]
+          description: User identifier
+        walletBalance:
+          $ref: '#/components/schemas/Money'
+          description: Current wallet balance
+        budgetByCategory:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Money'
+          description: Total spending by category
+          example:
+            food: "75.50"
+            groceries: "120.00"
+            transport: "45.25"
+            entertainment: "30.00"
+            other: "0.00"
+
+    NetDue:
+      type: object
+      required:
+        - owes
+        - amount
+      properties:
+        owes:
+          type: string
+          nullable: true
+          enum: ["A", "B"]
+          description: User who owes money (null if balanced)
+        amount:
+          $ref: '#/components/schemas/Money'
+          description: Amount owed (negative if the other user owes)
+
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          description: Error type identifier
+          example: "validation-error"
+        title:
+          type: string
+          description: Human-readable error title
+          example: "Invalid amount"
+        detail:
+          type: string
+          description: Detailed error message
+          example: "Amount must be positive and have at most 2 decimal places"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 422
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "bad-request"
+            title: "Bad Request"
+            detail: "Invalid request parameters"
+            status: 400
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "validation-error"
+            title: "Invalid amount"
+            detail: "Amount must be positive and have at most 2 decimal places"
+            status: 422
+
+    OverSettlement:
+      description: Over-settlement error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "over-settlement"
+            title: "Over-settlement"
+            detail: "Cannot settle more than what is owed. Current balance: 50.00, requested: 60.00"
+            status: 400
+
+    IdempotencyConflict:
+      description: Idempotency key conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "idempotency-conflict"
+            title: "Idempotency Key Conflict"
+            detail: "Request with same key but different body already exists"
+            status: 409
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: "not-found"
+            title: "Not Found"
+            detail: "The requested resource was not found"
+            status: 404

@@ -1,0 +1,191 @@
+### Split Budget Tracker API Examples
+### VS Code REST Client Extension
+
+@baseUrl = http://localhost:3000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Get User Summaries
+GET {{baseUrl}}/users
+
+### Get Who Owes Who
+GET {{baseUrl}}/who-owes-who
+
+### Get User Dashboard
+GET {{baseUrl}}/summary?userId=A
+
+### List All Transactions
+GET {{baseUrl}}/transactions
+
+### Create Group Expense (A pays for food)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "A",
+  "amount": "100.00",
+  "category": "food"
+}
+
+### Create Group Expense with Idempotency Key
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Idempotency-Key: food-expense-001
+
+{
+  "payerId": "A",
+  "amount": "100.00",
+  "category": "food"
+}
+
+### Retry Same Idempotency Key (should return existing transaction)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Idempotency-Key: food-expense-001
+
+{
+  "payerId": "A",
+  "amount": "100.00",
+  "category": "food"
+}
+
+### Idempotency Conflict (same key, different body)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+Idempotency-Key: food-expense-001
+
+{
+  "payerId": "A",
+  "amount": "150.00",
+  "category": "food"
+}
+
+### Create Group Expense (B pays for groceries)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "B",
+  "amount": "120.00",
+  "category": "groceries"
+}
+
+### Create Group Expense (A pays for transport)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "A",
+  "amount": "90.50",
+  "category": "transport"
+}
+
+### Create Group Expense (B pays for entertainment)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "B",
+  "amount": "60.00",
+  "category": "entertainment"
+}
+
+### Settlement (B pays A)
+POST {{baseUrl}}/settle
+Content-Type: application/json
+
+{
+  "fromUserId": "B",
+  "toUserId": "A",
+  "amount": "30.00"
+}
+
+### Settlement with Idempotency Key
+POST {{baseUrl}}/settle
+Content-Type: application/json
+Idempotency-Key: settlement-001
+
+{
+  "fromUserId": "B",
+  "toUserId": "A",
+  "amount": "25.00"
+}
+
+### Over-settlement (should fail)
+POST {{baseUrl}}/settle
+Content-Type: application/json
+
+{
+  "fromUserId": "B",
+  "toUserId": "A",
+  "amount": "1000.00"
+}
+
+### Validation Error - Invalid Amount
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "A",
+  "amount": "100.999",
+  "category": "food"
+}
+
+### Validation Error - Invalid Category
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "A",
+  "amount": "100.00",
+  "category": "invalid-category"
+}
+
+### Validation Error - Negative Amount
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "A",
+  "amount": "-50.00",
+  "category": "food"
+}
+
+### Seed Demo Data
+POST {{baseUrl}}/seed/demo
+
+### Test Rounding Edge Case (101.00 split)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "A",
+  "amount": "101.00",
+  "category": "food"
+}
+
+### Test Rounding Edge Case (100.01 split)
+POST {{baseUrl}}/transactions
+Content-Type: application/json
+
+{
+  "payerId": "B",
+  "amount": "100.01",
+  "category": "groceries"
+}
+
+### Get Updated Summaries After Transactions
+GET {{baseUrl}}/users
+
+### Get Updated Who Owes Who
+GET {{baseUrl}}/who-owes-who
+
+### Get User A Dashboard
+GET {{baseUrl}}/summary?userId=A
+
+### Get User B Dashboard
+GET {{baseUrl}}/summary?userId=B
+
+### Get All Transactions (should show group expenses and settlements)
+GET {{baseUrl}}/transactions

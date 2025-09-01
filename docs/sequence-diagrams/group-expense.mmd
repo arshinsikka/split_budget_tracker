@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant Client
+    participant API as POST /transactions
+    participant Validator as Zod Validation
+    participant Ledger as Double-Entry Ledger
+    participant Store as In-Memory Store
+    participant API as Response
+
+    Client->>API: POST /transactions<br/>{payerId: "A", amount: 100.00, category: "food"}
+    Note over Client,API: Optional: Idempotency-Key header
+
+    API->>Validator: Validate payload
+    Validator-->>API: ✓ Valid (or validation error)
+
+    alt Idempotency Key exists
+        API->>Store: Check for existing transaction
+        alt Key exists with same body
+            Store-->>API: Return existing transaction
+            API-->>Client: 200 OK (existing response)
+        else Key exists with different body
+            Store-->>API: Conflict detected
+            API-->>Client: 409 Conflict (RFC7807)
+        end
+    end
+
+    API->>Ledger: Create group expense transaction
+    Note over Ledger: Split 100.00 equally<br/>A: -100.00 CASH<br/>A: +50.00 EXPENSE:food<br/>B: +50.00 EXPENSE:food<br/>A: +50.00 DUE_FROM:A->B<br/>B: -50.00 DUE_TO:B->A
+
+    Ledger->>Store: Post transaction
+    Store-->>Ledger: ✓ Transaction saved
+
+    API->>Store: Get updated summaries
+    Store-->>API: User summaries with new balances
+
+    API-->>Client: 201 Created<br/>{transaction, summary}

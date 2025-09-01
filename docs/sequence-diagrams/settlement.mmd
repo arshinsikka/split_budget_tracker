@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant Client
+    participant API as POST /settle
+    participant Validator as Zod Validation
+    participant Store as In-Memory Store
+    participant Ledger as Double-Entry Ledger
+    participant API as Response
+
+    Client->>API: POST /settle<br/>{fromUserId: "B", toUserId: "A", amount: 30.00}
+    Note over Client,API: Optional: Idempotency-Key header
+
+    API->>Validator: Validate payload
+    Validator-->>API: ✓ Valid (or validation error)
+
+    alt Idempotency Key exists
+        API->>Store: Check for existing settlement
+        alt Key exists with same body
+            Store-->>API: Return existing settlement
+            API-->>Client: 200 OK (existing response)
+        else Key exists with different body
+            Store-->>API: Conflict detected
+            API-->>Client: 409 Conflict (RFC7807)
+        end
+    end
+
+    API->>Store: Get current DUE_FROM:A->B balance
+    Store-->>API: Current balance (e.g., 50.00)
+
+    alt Amount > Current Balance
+        API-->>Client: 400 Bad Request<br/>Over-settlement error
+    else Amount ≤ Current Balance
+        API->>Ledger: Create settlement transaction
+        Note over Ledger: B pays A 30.00<br/>B: -30.00 CASH<br/>A: +30.00 CASH<br/>A: -30.00 DUE_FROM:A->B<br/>B: -30.00 DUE_TO:B->A
+
+        Ledger->>Store: Post transaction
+        Store-->>Ledger: ✓ Transaction saved
+
+        API->>Store: Get updated summaries
+        Store-->>API: User summaries with new balances
+
+        API-->>Client: 201 Created<br/>{settlement, summary}
+    end
