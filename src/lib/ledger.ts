@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { validateAmount } from './money';
 
 export type UserId = 'A' | 'B';
-export type TransactionType = 'GROUP' | 'SETTLEMENT';
+export type TransactionType = 'GROUP' | 'SETTLEMENT' | 'INITIAL';
 export type Category =
   | 'food'
   | 'groceries'
@@ -120,8 +120,9 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
   });
 
   // 2. Credit both users' expense accounts (they both owe their share)
-  // Payer gets their share plus the remainder
-  const payerExpenseCents = halfCents + remainderCents;
+  // According to ADR: budgets are T/2 each (banker's rounding)
+  // Both users get the same rounded amount for budgets
+  const budgetAmount = halfCents / 100;
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -129,11 +130,10 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(payerId, category),
     userId: payerId,
     category,
-    delta: payerExpenseCents / 100, // Positive: expense recorded
+    delta: budgetAmount, // Positive: expense recorded
     createdAt,
   });
 
-  // Other user gets their share
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -141,11 +141,12 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(otherUserId, category),
     userId: otherUserId,
     category,
-    delta: halfCents / 100, // Positive: expense recorded
+    delta: budgetAmount, // Positive: expense recorded
     createdAt,
   });
 
   // 3. Credit payer's receivable from other user
+  // The remainder affects receivable/payable, not budgets
   const dueFromCents = halfCents + remainderCents;
   entries.push({
     id: uuidv4(),

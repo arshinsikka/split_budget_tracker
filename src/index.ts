@@ -9,6 +9,7 @@
 import express from 'express';
 import { errorHandler, NotFoundError } from './adapters/http/errorHandler';
 import { healthRouter } from './adapters/http/healthRouter';
+import { apiRouter } from './adapters/http/routes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/health', healthRouter);
+app.use('/', apiRouter);
 
 // 404 handler for unknown routes
 app.use('*', (_req, _res, next) => {

@@ -55,6 +55,70 @@ paths:
                     type: string
                     example: "0.1.0"
 
+  /seed/init:
+    post:
+      summary: Initialize/Reset application state
+      description: |
+        Reset the in-memory state and set initial wallet balances for both users.
+        This endpoint is primarily for testing and demonstration purposes.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                walletA:
+                  type: number
+                  minimum: 0
+                  description: Initial wallet balance for user A
+                  example: 500
+                walletB:
+                  type: number
+                  minimum: 0
+                  description: Initial wallet balance for user B
+                  example: 500
+              example:
+                walletA: 500
+                walletB: 500
+      responses:
+        '200':
+          description: State initialized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSummary'
+                  netDue:
+                    $ref: '#/components/schemas/NetDue'
+              example:
+                users:
+                  - userId: "A"
+                    walletBalance: 500
+                    budgetByCategory:
+                      food: 0
+                      groceries: 0
+                      transport: 0
+                      entertainment: 0
+                      other: 0
+                  - userId: "B"
+                    walletBalance: 500
+                    budgetByCategory:
+                      food: 0
+                      groceries: 0
+                      transport: 0
+                      entertainment: 0
+                      other: 0
+                netDue:
+                  owes: null
+                  amount: 0
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /users:
     get:
       summary: Get user summaries
@@ -76,24 +140,24 @@ paths:
               example:
                 users:
                   - userId: "A"
-                    walletBalance: "450.00"
+                    walletBalance: 450
                     budgetByCategory:
-                      food: "75.50"
-                      groceries: "120.00"
-                      transport: "45.25"
-                      entertainment: "30.00"
-                      other: "0.00"
+                      food: 75.50
+                      groceries: 120
+                      transport: 45.25
+                      entertainment: 30
+                      other: 0
                   - userId: "B"
-                    walletBalance: "470.00"
+                    walletBalance: 470
                     budgetByCategory:
-                      food: "75.50"
-                      groceries: "120.00"
-                      transport: "45.25"
-                      entertainment: "30.00"
-                      other: "0.00"
+                      food: 75.50
+                      groceries: 120
+                      transport: 45.25
+                      entertainment: 30
+                      other: 0
                 netDue:
                   owes: "B"
-                  amount: "20.00"
+                  amount: 20
 
   /transactions:
     get:
@@ -119,15 +183,15 @@ paths:
                     type: "GROUP"
                     createdAt: "2024-01-15T10:00:00.000Z"
                     payerId: "A"
-                    amount: "100.00"
+                    amount: 100
                     category: "food"
-                    perUserShare: "50.00"
+                    perUserShare: 50
                   - id: "settle-001"
                     type: "SETTLEMENT"
                     createdAt: "2024-01-15T11:00:00.000Z"
                     fromUserId: "B"
                     toUserId: "A"
-                    amount: "30.00"
+                    amount: 30
 
     post:
       summary: Create group expense
@@ -154,7 +218,7 @@ paths:
                   $ref: '#/components/schemas/Category'
             example:
               payerId: "A"
-              amount: "100.00"
+              amount: 100
               category: "food"
       responses:
         '201':
@@ -181,9 +245,9 @@ paths:
                   type: "GROUP"
                   createdAt: "2024-01-15T10:00:00.000Z"
                   payerId: "A"
-                  amount: "100.00"
+                  amount: 100
                   category: "food"
-                  perUserShare: "50.00"
+                  perUserShare: 50
                 summary:
                   users:
                     - userId: "A"
@@ -241,7 +305,7 @@ paths:
             example:
               fromUserId: "B"
               toUserId: "A"
-              amount: "30.00"
+              amount: 30
       responses:
         '201':
           description: Settlement recorded successfully
@@ -268,7 +332,7 @@ paths:
                   createdAt: "2024-01-15T11:00:00.000Z"
                   fromUserId: "B"
                   toUserId: "A"
-                  amount: "30.00"
+                  amount: 30
                 summary:
                   users:
                     - userId: "A"
@@ -289,7 +353,7 @@ paths:
                         other: "0.00"
                   netDue:
                     owes: "B"
-                    amount: "10.00"
+                    amount: 10
         '400':
           $ref: '#/components/responses/OverSettlement'
         '422':
@@ -345,7 +409,7 @@ paths:
                     type: "GROUP"
                     createdAt: "2024-01-15T10:00:00.000Z"
                     payerId: "A"
-                    amount: "100.00"
+                    amount: 100
                     category: "food"
                     perUserShare: "50.00"
         '400':
@@ -364,7 +428,7 @@ paths:
                 $ref: '#/components/schemas/NetDue'
               example:
                 owes: "B"
-                amount: "20.00"
+                amount: 20
 
   /seed/demo:
     post:
@@ -416,10 +480,10 @@ paths:
 components:
   schemas:
     Money:
-      type: string
-      pattern: '^\d+\.\d{2}$'
-      description: Amount in SGD with exactly 2 decimal places
-      example: "100.00"
+      type: number
+      format: float
+      description: Amount in SGD with up to 2 decimal places
+      example: 100.00
       minimum: 0.01
       maximum: 1000000.00
 
@@ -526,11 +590,11 @@ components:
             $ref: '#/components/schemas/Money'
           description: Total spending by category
           example:
-            food: "75.50"
-            groceries: "120.00"
-            transport: "45.25"
-            entertainment: "30.00"
-            other: "0.00"
+            food: 75.50
+            groceries: 120
+            transport: 45.25
+            entertainment: 30
+            other: 0
 
     NetDue:
       type: object
@@ -592,8 +656,8 @@ components:
             $ref: '#/components/schemas/Problem'
           example:
             type: "validation-error"
-            title: "Invalid amount"
-            detail: "Amount must be positive and have at most 2 decimal places"
+            title: "Invalid request body"
+            detail: "Invalid request body"
             status: 422
 
     OverSettlement:
@@ -616,7 +680,7 @@ components:
             $ref: '#/components/schemas/Problem'
           example:
             type: "idempotency-conflict"
-            title: "Idempotency Key Conflict"
+            title: "Idempotency conflict"
             detail: "Request with same key but different body already exists"
             status: 409
 
@@ -628,6 +692,6 @@ components:
             $ref: '#/components/schemas/Problem'
           example:
             type: "not-found"
-            title: "Not Found"
-            detail: "The requested resource was not found"
+            title: "Resource not found"
+            detail: "Route not found"
             status: 404

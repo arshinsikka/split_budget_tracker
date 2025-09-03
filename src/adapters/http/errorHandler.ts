@@ -13,7 +13,7 @@ export interface AppError extends Error {
 }
 
 export class ValidationError extends Error implements AppError {
-  statusCode = 400;
+  statusCode = 422;
   isOperational = true;
 
   constructor(message: string) {
@@ -66,11 +66,37 @@ export function errorHandler(
       ? error.message
       : 'Internal server error';
 
+  // Return RFC 7807 Problem Details format
   res.status(statusCode).json({
-    error: {
-      name: error.name,
-      message,
-      statusCode,
-    },
+    type: getErrorType(error.name),
+    title: getErrorTitle(error.name),
+    detail: message,
+    status: statusCode,
   });
+}
+
+function getErrorType(errorName: string): string {
+  switch (errorName) {
+    case 'ValidationError':
+      return 'validation-error';
+    case 'ConflictError':
+      return 'idempotency-conflict';
+    case 'NotFoundError':
+      return 'not-found';
+    default:
+      return 'internal-error';
+  }
+}
+
+function getErrorTitle(errorName: string): string {
+  switch (errorName) {
+    case 'ValidationError':
+      return 'Invalid request body';
+    case 'ConflictError':
+      return 'Idempotency conflict';
+    case 'NotFoundError':
+      return 'Resource not found';
+    default:
+      return 'Internal server error';
+  }
 }
