@@ -67,6 +67,20 @@ export const UserSummaryQuerySchema = z.object({
 });
 
 /**
+ * Query parameters for summary endpoint
+ */
+export const SummaryQuerySchema = z.object({
+  userId: UserIdSchema,
+});
+
+/**
+ * Query parameters for seed init with demo
+ */
+export const SeedInitQuerySchema = z.object({
+  demo: z.enum(['true', 'false']).optional(),
+});
+
+/**
  * Type exports for use in routes
  */
 export type GroupExpenseInput = z.infer<typeof GroupExpenseInputSchema>;

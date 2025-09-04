@@ -15,6 +15,8 @@ import {
   SettlementInputSchema,
   IdempotencyKeySchema,
   UserSummaryQuerySchema,
+  SummaryQuerySchema,
+  SeedInitQuerySchema,
   type GroupExpenseInput,
   type SettlementInput,
 } from './validators';
@@ -50,6 +52,68 @@ router.get('/users', (req: Request, res: Response, next: NextFunction) => {
       // Return complete summary
       res.json(summary);
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /summary - Get compact summary for one user
+ */
+router.get('/summary', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Parse query parameters
+    const queryResult = SummaryQuerySchema.safeParse(req.query);
+    if (!queryResult.success) {
+      throw new ValidationError('Invalid query parameters');
+    }
+
+    const { userId } = queryResult.data;
+    const entries = eventStore.getLedgerEntries();
+    const summary = computeCompleteSummary(entries);
+    const netDue = computeNetDue(entries);
+
+    // Find the user summary
+    const userSummary = summary.users.find(u => u.userId === userId);
+    if (!userSummary) {
+      throw new ValidationError(`User ${userId} not found`);
+    }
+
+    // Create compact summary with net position relative to other user
+    const otherUserId = userId === 'A' ? 'B' : 'A';
+    const netPosition = {
+      owes: netDue.owes === userId ? otherUserId : netDue.owes,
+      amount: netDue.owes === userId ? netDue.amount : netDue.owes === otherUserId ? netDue.amount : 0,
+    };
+
+    const compactSummary = {
+      userId: userSummary.userId,
+      walletBalance: userSummary.walletBalance,
+      budgetByCategory: userSummary.budgetByCategory,
+      netPosition,
+    };
+
+    res.json(compactSummary);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /who-owes-who - Get simplified debt summary
+ */
+router.get('/who-owes-who', (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const entries = eventStore.getLedgerEntries();
+    const netDue = computeNetDue(entries);
+
+    const debtSummary = {
+      owes: netDue.owes,
+      to: netDue.owes === 'A' ? 'B' : netDue.owes === 'B' ? 'A' : null,
+      amount: netDue.amount,
+    };
+
+    res.json(debtSummary);
   } catch (error) {
     next(error);
   }
@@ -232,6 +296,10 @@ router.post('/settle', (req: Request, res: Response, next: NextFunction) => {
  */
 router.post('/seed/init', (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Parse query parameters for demo mode
+    const queryResult = SeedInitQuerySchema.safeParse(req.query);
+    const isDemo = queryResult.success && queryResult.data.demo === 'true';
+    
     // Parse request body with defaults
     const body = req.body || {};
     const walletA = body.walletA ?? 500;
@@ -273,6 +341,24 @@ router.post('/seed/init', (req: Request, res: Response, next: NextFunction) => {
     
     // Add initial entries to event store
     eventStore.addInitialEntries(initialEntries);
+    
+    // If demo mode, add sample transactions
+    if (isDemo) {
+      // Demo transaction 1: A pays 120 food
+      const demo1Input: GroupExpenseInput = { payerId: 'A', amount: '120.00', category: 'food' };
+      const demo1Entries = postGroupExpense({ ...demo1Input, amount: 120 });
+      eventStore.addGroupExpense({ ...demo1Input, amount: 120 }, demo1Entries);
+      
+      // Demo transaction 2: B pays 80 groceries
+      const demo2Input: GroupExpenseInput = { payerId: 'B', amount: '80.00', category: 'groceries' };
+      const demo2Entries = postGroupExpense({ ...demo2Input, amount: 80 });
+      eventStore.addGroupExpense({ ...demo2Input, amount: 80 }, demo2Entries);
+      
+      // Demo transaction 3: A pays 50 transport
+      const demo3Input: GroupExpenseInput = { payerId: 'A', amount: '50.00', category: 'transport' };
+      const demo3Entries = postGroupExpense({ ...demo3Input, amount: 50 });
+      eventStore.addGroupExpense({ ...demo3Input, amount: 50 }, demo3Entries);
+    }
     
     // Return current summary
     const summary = computeCompleteSummary(eventStore.getLedgerEntries());

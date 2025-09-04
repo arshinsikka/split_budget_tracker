@@ -272,6 +272,65 @@ fi
 echo "✅ Final state verified"
 
 echo ""
+echo "📊 Step 6: Test new Day 5 endpoints"
+echo "==================================="
+
+# Test GET /summary endpoint
+echo ""
+echo "🔍 Testing GET /summary endpoint..."
+
+SUMMARY_A=$(curl -s "$BASE_URL/summary?userId=A" | jq '.')
+SUMMARY_B=$(curl -s "$BASE_URL/summary?userId=B" | jq '.')
+
+echo "User A summary:"
+echo "$SUMMARY_A" | jq '.'
+
+echo "User B summary:"
+echo "$SUMMARY_B" | jq '.'
+
+# Verify summary responses
+SUMMARY_A_WALLET=$(echo "$SUMMARY_A" | jq -r '.walletBalance')
+SUMMARY_A_FOOD=$(echo "$SUMMARY_A" | jq -r '.budgetByCategory.food')
+SUMMARY_A_NET_POSITION=$(echo "$SUMMARY_A" | jq -r '.netPosition.owes')
+
+SUMMARY_B_WALLET=$(echo "$SUMMARY_B" | jq -r '.walletBalance')
+SUMMARY_B_FOOD=$(echo "$SUMMARY_B" | jq -r '.budgetByCategory.food')
+SUMMARY_B_NET_POSITION=$(echo "$SUMMARY_B" | jq -r '.netPosition.owes')
+
+if [ "$SUMMARY_A_WALLET" != "440" ] || [ "$SUMMARY_A_FOOD" != "60" ] || [ "$SUMMARY_A_NET_POSITION" != "null" ]; then
+    echo "❌ User A summary incorrect: wallet=$SUMMARY_A_WALLET, food=$SUMMARY_A_FOOD, netPosition=$SUMMARY_A_NET_POSITION"
+    exit 1
+fi
+
+if [ "$SUMMARY_B_WALLET" != "440" ] || [ "$SUMMARY_B_FOOD" != "60" ] || [ "$SUMMARY_B_NET_POSITION" != "null" ]; then
+    echo "❌ User B summary incorrect: wallet=$SUMMARY_B_WALLET, food=$SUMMARY_B_FOOD, netPosition=$SUMMARY_B_NET_POSITION"
+    exit 1
+fi
+
+echo "✅ Summary endpoints verified"
+
+# Test GET /who-owes-who endpoint
+echo ""
+echo "🔍 Testing GET /who-owes-who endpoint..."
+
+WHO_OWES=$(curl -s "$BASE_URL/who-owes-who" | jq '.')
+
+echo "Who owes who:"
+echo "$WHO_OWES" | jq '.'
+
+# Verify who-owes-who response
+WHO_OWES_OWES=$(echo "$WHO_OWES" | jq -r '.owes')
+WHO_OWES_TO=$(echo "$WHO_OWES" | jq -r '.to')
+WHO_OWES_AMOUNT=$(echo "$WHO_OWES" | jq -r '.amount')
+
+if [ "$WHO_OWES_OWES" != "null" ] || [ "$WHO_OWES_TO" != "null" ] || [ "$WHO_OWES_AMOUNT" != "0" ]; then
+    echo "❌ Who owes who incorrect: owes=$WHO_OWES_OWES, to=$WHO_OWES_TO, amount=$WHO_OWES_AMOUNT"
+    exit 1
+fi
+
+echo "✅ Who-owes-who endpoint verified"
+
+echo ""
 echo "🎉 E2E test completed successfully!"
 echo "===================================="
 echo "✅ Initial state: Both users have 500 wallet balance, no debt"
@@ -313,3 +372,21 @@ echo "✅ Idempotency test passed"
 
 echo ""
 echo "🎯 All tests passed! The Split Budget Tracker is working correctly."
+
+# Optional: Run demo mode
+if [ "${RUN_DEMO:-false}" = "true" ]; then
+    echo ""
+    echo "🎭 Optional: Running demo mode"
+    echo "=============================="
+    
+    DEMO_STATE=$(curl -s -X POST "$BASE_URL/seed/init?demo=true" | jq '.')
+    
+    echo "Demo state:"
+    echo "$DEMO_STATE" | jq '.'
+    
+    echo ""
+    echo "✅ Demo mode completed successfully!"
+fi
+
+echo ""
+echo "🧹 Cleaning up server process (PID: $SERVER_PID)..."

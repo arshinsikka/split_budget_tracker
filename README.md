@@ -1,5 +1,9 @@
 # Split Budget Tracker
 
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/arshinsikka/split-budget-tracker)
+[![Test Coverage](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/arshinsikka/split-budget-tracker)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A backend API for tracking shared expenses between two friends with double-entry ledger accounting for mathematical consistency.
 
 ## Features
@@ -17,15 +21,14 @@ A backend API for tracking shared expenses between two friends with double-entry
 # Install dependencies
 npm install
 
-# Run tests
-npm test
+# Build the project
+npm run build
 
 # Start development server
 npm run dev
 
-# Build for production
-npm run build
-npm start
+# Verify it's working
+curl -s http://localhost:3000/health | jq
 ```
 
 ## API Documentation
@@ -52,7 +55,7 @@ npm start
 - `POST /settle` - Record settlement between users
 - `GET /summary?userId=A` - Get user dashboard
 - `GET /who-owes-who` - Simple debt summary
-- `POST /seed/demo` - Create sample data
+- `POST /seed/init?demo=true` - Create sample data
 
 ### Example Usage
 
@@ -69,7 +72,32 @@ curl -X POST http://localhost:3000/settle \
 
 # Get user summaries
 curl http://localhost:3000/users
+
+# Get user dashboard (Day 5 feature)
+curl -s http://localhost:3000/summary?userId=A | jq
+
+# Get debt summary (Day 5 feature)
+curl -s http://localhost:3000/who-owes-who | jq
+
+# Initialize with demo data (Day 5 feature)
+curl -s -X POST "http://localhost:3000/seed/init?demo=true" | jq
 ```
+
+### E2E Demo
+
+Run the complete demo scenario:
+
+```bash
+# Run the end-to-end demo script
+bash scripts/e2e.sh
+```
+
+This script:
+1. Starts the server on a random port
+2. Initializes with demo data (`POST /seed/init?demo=true`)
+3. Creates sample transactions and settlements
+4. Verifies final state with `jq` assertions
+5. Cleans up the server process
 
 ### Idempotency
 

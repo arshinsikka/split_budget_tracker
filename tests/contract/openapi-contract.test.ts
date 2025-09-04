@@ -40,6 +40,24 @@ describe('OpenAPI Contract Validation', () => {
         components: openApiSpec.components,
         responses: openApiSpec.paths['/settle'].post.responses,
       }),
+      
+      'GET /summary': new OpenAPISchemaValidator({
+        openapi: openApiSpec.openapi,
+        components: openApiSpec.components,
+        responses: openApiSpec.paths['/summary'].get.responses,
+      }),
+      
+      'GET /who-owes-who': new OpenAPISchemaValidator({
+        openapi: openApiSpec.openapi,
+        components: openApiSpec.components,
+        responses: openApiSpec.paths['/who-owes-who'].get.responses,
+      }),
+      
+      'POST /seed/init': new OpenAPISchemaValidator({
+        openapi: openApiSpec.openapi,
+        components: openApiSpec.components,
+        responses: openApiSpec.paths['/seed/init'].post.responses,
+      }),
     };
   });
   
@@ -245,6 +263,141 @@ describe('OpenAPI Contract Validation', () => {
         detail: expect.stringContaining('Cannot settle with yourself'),
         status: 422,
       });
+    });
+  });
+  
+  describe('GET /summary', () => {
+    it('should return response matching OpenAPI schema', async () => {
+      // Initialize fresh state
+      await fetch(`${server.baseURL}/seed/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletA: 500, walletB: 500 }),
+      });
+      
+      const response = await fetch(`${server.baseURL}/summary?userId=A`);
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      
+      // Basic schema validation - check required fields exist
+      expect(data).toHaveProperty('userId');
+      expect(data).toHaveProperty('walletBalance');
+      expect(data).toHaveProperty('budgetByCategory');
+      expect(data).toHaveProperty('netPosition');
+      
+      // Additional schema checks
+      expect(data.userId).toBe('A');
+      expect(data.walletBalance).toBe(500);
+      expect(data.budgetByCategory).toHaveProperty('food');
+      expect(data.budgetByCategory).toHaveProperty('groceries');
+      expect(data.budgetByCategory).toHaveProperty('transport');
+      expect(data.budgetByCategory).toHaveProperty('entertainment');
+      expect(data.budgetByCategory).toHaveProperty('other');
+      expect(data.netPosition).toHaveProperty('owes');
+      expect(data.netPosition).toHaveProperty('amount');
+    });
+    
+    it('should return validation error for invalid userId', async () => {
+      const response = await fetch(`${server.baseURL}/summary?userId=Z`);
+      expect(response.status).toBe(422);
+      
+      const data = await response.json();
+      
+      // Check that it follows RFC 7807 format
+      expect(data).toMatchObject({
+        type: 'validation-error',
+        title: 'Invalid request body',
+        detail: expect.any(String),
+        status: 422,
+      });
+    });
+  });
+  
+  describe('GET /who-owes-who', () => {
+    it('should return response matching OpenAPI schema', async () => {
+      // Initialize fresh state
+      await fetch(`${server.baseURL}/seed/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletA: 500, walletB: 500 }),
+      });
+      
+      const response = await fetch(`${server.baseURL}/who-owes-who`);
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      
+      // Basic schema validation - check required fields exist
+      expect(data).toHaveProperty('owes');
+      expect(data).toHaveProperty('to');
+      expect(data).toHaveProperty('amount');
+      
+      // Additional schema checks
+      expect(data.owes).toBeNull(); // No debt initially
+      expect(data.to).toBeNull();
+      expect(data.amount).toBe(0);
+    });
+    
+    it('should reflect debt after group expense', async () => {
+      // Initialize fresh state
+      await fetch(`${server.baseURL}/seed/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletA: 500, walletB: 500 }),
+      });
+      
+      // Create group expense: A pays 120 food
+      await fetch(`${server.baseURL}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payerId: 'A',
+          amount: '120.00',
+          category: 'food',
+        }),
+      });
+      
+      const response = await fetch(`${server.baseURL}/who-owes-who`);
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      
+      // Check debt summary
+      expect(data.owes).toBe('B'); // B owes A
+      expect(data.to).toBe('A');   // A is owed
+      expect(data.amount).toBe(60); // 120/2
+    });
+  });
+  
+  describe('POST /seed/init?demo=true', () => {
+    it('should return response matching OpenAPI schema', async () => {
+      const response = await fetch(`${server.baseURL}/seed/init?demo=true`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(response.status).toBe(200);
+      
+      const data = await response.json();
+      
+      // Basic schema validation - check required fields exist
+      expect(data).toHaveProperty('users');
+      expect(data).toHaveProperty('netDue');
+      expect(Array.isArray(data.users)).toBe(true);
+      expect(data.users).toHaveLength(2);
+      
+      // Additional schema checks
+      expect(data.users[0]).toHaveProperty('userId');
+      expect(data.users[0]).toHaveProperty('walletBalance');
+      expect(data.users[0]).toHaveProperty('budgetByCategory');
+      expect(data.netDue).toHaveProperty('owes');
+      expect(data.netDue).toHaveProperty('amount');
+      
+      // Verify demo data was created
+      expect(data.users[0].userId).toBe('A');
+      expect(data.users[1].userId).toBe('B');
+      expect(data.users[0].walletBalance).toBeLessThan(500); // Should be reduced by demo transactions
+      expect(data.users[1].walletBalance).toBeLessThan(500);
     });
   });
   

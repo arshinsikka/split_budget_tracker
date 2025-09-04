@@ -153,7 +153,16 @@ Content-Type: application/json
 }
 
 ### Seed Demo Data
-POST {{baseUrl}}/seed/demo
+POST {{baseUrl}}/seed/init?demo=true
+
+### Seed with Custom Wallet Balances
+POST {{baseUrl}}/seed/init
+Content-Type: application/json
+
+{
+  "walletA": 1000,
+  "walletB": 800
+}
 
 ### Test Rounding Edge Case (101.00 split)
 POST {{baseUrl}}/transactions
