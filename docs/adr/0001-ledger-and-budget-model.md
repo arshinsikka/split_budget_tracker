@@ -76,6 +76,86 @@ Idempotency-Key: abc123
 5. **Non-negative amounts**: Reject amounts ≤ 0
 6. **Precision**: All amounts rounded to 2 decimal places
 
+### API Response Format
+
+All API responses use **numbers with 2 decimal places** for money amounts, not strings. This provides better JSON serialization and avoids string parsing issues.
+
+**Example response**:
+```json
+{
+  "userId": "A",
+  "walletBalance": 440.00,
+  "budgetByCategory": {
+    "food": 60.00,
+    "groceries": 0.00,
+    "transport": 0.00,
+    "entertainment": 0.00,
+    "other": 0.00
+  },
+  "netPosition": {
+    "owes": null,
+    "amount": 0.00
+  }
+}
+```
+
+### Additional Endpoints (Day 5)
+
+#### GET /summary?userId={A|B}
+
+Returns a compact user dashboard with wallet balance, budget by category, and net position relative to the other user.
+
+**Response format**:
+```json
+{
+  "userId": "A",
+  "walletBalance": 440.00,
+  "budgetByCategory": {
+    "food": 60.00,
+    "groceries": 0.00,
+    "transport": 0.00,
+    "entertainment": 0.00,
+    "other": 0.00
+  },
+  "netPosition": {
+    "owes": "B",
+    "amount": 60.00
+  }
+}
+```
+
+#### GET /who-owes-who
+
+Returns simplified debt summary showing who owes whom and how much.
+
+**Response format**:
+```json
+{
+  "owes": "B",
+  "to": "A", 
+  "amount": 60.00
+}
+```
+
+When no debt exists:
+```json
+{
+  "owes": null,
+  "to": null,
+  "amount": 0.00
+}
+```
+
+#### POST /seed/init?demo=true
+
+Initializes the system with sample data for demonstration and testing purposes. Preloads three transactions:
+
+1. A pays 120.00 food
+2. B pays 80.00 groceries  
+3. A pays 50.00 transport
+
+**Response**: Current state after demo data creation.
+
 ### Error Model
 
 Use RFC 7807 Problem Details with these types:

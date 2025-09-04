@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant Client
+    participant Express Router
+    participant Zod Validator
+    participant Event Store
+    participant Projections
+    participant Response
+
+    Client->>Express Router: GET /summary?userId=A
+    Express Router->>Zod Validator: Validate query params
+    Zod Validator-->>Express Router: userId=A (valid)
+    
+    Express Router->>Event Store: getLedgerEntries()
+    Event Store-->>Express Router: [ledger entries]
+    
+    Express Router->>Projections: computeCompleteSummary(entries)
+    Projections-->>Express Router: {users: [...], netDue: {...}}
+    
+    Express Router->>Projections: computeNetDue(entries)
+    Projections-->>Express Router: {owes: "B", amount: 60}
+    
+    Express Router->>Express Router: Find user A summary
+    Express Router->>Express Router: Create netPosition relative to B
+    
+    Express Router->>Response: JSON response
+    Response-->>Client: {
+        userId: "A",
+        walletBalance: 440,
+        budgetByCategory: {...},
+        netPosition: {
+            owes: "B",
+            amount: 60
+        }
+    }
+

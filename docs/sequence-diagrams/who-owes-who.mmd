@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant Client
+    participant Express Router
+    participant Event Store
+    participant Projections
+    participant Response
+
+    Client->>Express Router: GET /who-owes-who
+    Express Router->>Event Store: getLedgerEntries()
+    Event Store-->>Express Router: [ledger entries]
+    
+    Express Router->>Projections: computeNetDue(entries)
+    Projections-->>Express Router: {owes: "B", amount: 60}
+    
+    Express Router->>Express Router: Create debt summary
+    Express Router->>Express Router: owes: "B", to: "A", amount: 60
+    
+    Express Router->>Response: JSON response
+    Response-->>Client: {
+        owes: "B",
+        to: "A",
+        amount: 60
+    }
+

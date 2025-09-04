@@ -193,8 +193,94 @@ GET {{baseUrl}}/who-owes-who
 ### Get User A Dashboard
 GET {{baseUrl}}/summary?userId=A
 
+# Expected response:
+# {
+#   "userId": "A",
+#   "walletBalance": 440,
+#   "budgetByCategory": {
+#     "food": 60,
+#     "groceries": 0,
+#     "transport": 0,
+#     "entertainment": 0,
+#     "other": 0
+#   },
+#   "netPosition": {
+#     "owes": null,
+#     "amount": 0
+#   }
+# }
+
 ### Get User B Dashboard
 GET {{baseUrl}}/summary?userId=B
+
+# Expected response:
+# {
+#   "userId": "B",
+#   "walletBalance": 440,
+#   "budgetByCategory": {
+#     "food": 60,
+#     "groceries": 0,
+#     "transport": 0,
+#     "entertainment": 0,
+#     "other": 0
+#   },
+#   "netPosition": {
+#     "owes": null,
+#     "amount": 0
+#   }
+# }
+
+### Get Debt Summary
+GET {{baseUrl}}/who-owes-who
+
+# Expected response (when debt exists):
+# {
+#   "owes": "B",
+#   "to": "A",
+#   "amount": 60
+# }
+
+# Expected response (when no debt):
+# {
+#   "owes": null,
+#   "to": null,
+#   "amount": 0
+# }
+
+### Initialize with Demo Data
+POST {{baseUrl}}/seed/init?demo=true
+
+# Expected response:
+# {
+#   "users": [
+#     {
+#       "userId": "A",
+#       "walletBalance": 330,
+#       "budgetByCategory": {
+#         "food": 60,
+#         "groceries": 40,
+#         "transport": 25,
+#         "entertainment": 0,
+#         "other": 0
+#       }
+#     },
+#     {
+#       "userId": "B",
+#       "walletBalance": 420,
+#       "budgetByCategory": {
+#         "food": 60,
+#         "groceries": 40,
+#         "transport": 25,
+#         "entertainment": 0,
+#         "other": 0
+#       }
+#     }
+#   ],
+#   "netDue": {
+#     "owes": "B",
+#     "amount": 45
+#   }
+# }
 
 ### Get All Transactions (should show group expenses and settlements)
 GET {{baseUrl}}/transactions

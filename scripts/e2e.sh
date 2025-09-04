@@ -331,6 +331,15 @@ fi
 echo "✅ Who-owes-who endpoint verified"
 
 echo ""
+echo "📊 Day 5 Features Summary"
+echo "========================="
+echo "✅ GET /summary?userId=A - Returns compact user dashboard"
+echo "✅ GET /summary?userId=B - Returns compact user dashboard"  
+echo "✅ GET /who-owes-who - Returns simplified debt summary"
+echo "✅ POST /seed/init?demo=true - Initializes with sample data"
+echo "✅ All Day 5 endpoints working correctly!"
+
+echo ""
 echo "🎉 E2E test completed successfully!"
 echo "===================================="
 echo "✅ Initial state: Both users have 500 wallet balance, no debt"
