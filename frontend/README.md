@@ -168,6 +168,40 @@ frontend/
 └── .env                       # Environment variables
 ```
 
+## Transactions Page
+
+The Transactions page (`/transactions`) provides comprehensive transaction management:
+
+### Features
+- **Transaction List**: Displays all transactions with key fields (type, payer/receiver, category, amount, date)
+- **Real-time Data**: Fetches live data from `GET /transactions` endpoint
+- **Filtering & Sorting**: Filter by transaction type and category, sort by date or amount
+- **Add Group Expense**: Form to create new group expenses with validation
+- **Currency Formatting**: All amounts displayed in SGD with 2 decimal places
+- **Loading States**: Skeleton animations during data fetch
+- **Empty States**: Clear messaging when no transactions exist
+- **Error Handling**: Toast notifications for API errors with retry functionality
+
+### Add Group Expense Form
+- **Fields**: Payer (User A/B), Amount (SGD), Category (food/groceries/transport/entertainment/other)
+- **Validation**: Client-side validation with inline error messages
+- **Double-submit Protection**: Form disabled during submission to prevent duplicates
+- **Success Feedback**: Toast notification and automatic list refresh on success
+- **Error Handling**: Server validation errors displayed as toast messages
+
+### Transaction Display
+- **Type Badges**: Color-coded badges for GROUP (blue) and SETTLEMENT (green) transactions
+- **Payer/Receiver Info**: Clear indication of who paid or who owes whom
+- **Category Display**: Capitalized category names with fallback for missing categories
+- **Date Formatting**: Singapore locale formatting with date and time
+- **Responsive Table**: Horizontal scroll on mobile devices
+
+### Filtering & Sorting
+- **Type Filter**: Show all, group expenses only, or settlements only
+- **Category Filter**: Filter by specific expense categories
+- **Sort Options**: Sort by date (newest/oldest) or amount (highest/lowest)
+- **Real-time Updates**: Filters and sorting apply immediately to the displayed list
+
 ## Backend Integration
 
 The frontend connects to the Split Budget Tracker backend API. Make sure the backend is running on the configured URL (default: http://localhost:3000).
@@ -179,3 +213,5 @@ The application includes:
 - ✅ Comprehensive error handling with user-friendly messages
 - ✅ Client-side routing with React Router
 - ✅ Error boundary for graceful error handling
+- ✅ Real-time transaction management with filtering and sorting
+- ✅ Form validation and double-submit protection
