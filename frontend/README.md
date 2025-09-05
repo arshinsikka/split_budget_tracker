@@ -7,10 +7,30 @@ A React + TypeScript + TailwindCSS frontend for the Split Budget Tracker API.
 - ✅ React 18 with TypeScript
 - ✅ Vite for fast development and building
 - ✅ TailwindCSS for styling
+- ✅ React Router for client-side navigation
 - ✅ Comprehensive API client with error handling
 - ✅ Toast notifications for user feedback
+- ✅ Error boundary for graceful error handling
 - ✅ Health check component that connects to backend API
 - ✅ Environment-based API URL configuration
+
+## Layout & Navigation
+
+The app features a clean, minimal layout with three main views:
+
+- **Dashboard** (`/`) - Overview of shared expenses and balances
+- **Transactions** (`/transactions`) - View and manage transaction history
+- **Settle** (`/settle`) - Record settlement payments
+
+### Navigation
+- Top navigation bar with project title
+- Responsive design with focus styles for accessibility
+- Active route highlighting with color-coded indicators
+
+### Error Handling
+- App-level error boundary with user-friendly fallback UI
+- Development mode shows detailed error information
+- Graceful error recovery with refresh option
 
 ## Setup
 
@@ -126,20 +146,26 @@ try {
 frontend/
 ├── src/
 │   ├── components/
-│   │   └── HealthCheck.tsx    # Health check component
+│   │   ├── Dashboard.tsx         # Dashboard page component
+│   │   ├── Transactions.tsx      # Transactions page component
+│   │   ├── Settle.tsx           # Settle page component
+│   │   ├── Navigation.tsx       # Top navigation component
+│   │   ├── ErrorBoundary.tsx    # Error boundary component
+│   │   ├── ErrorTest.tsx        # Error boundary test component
+│   │   └── HealthCheck.tsx      # Health check component
 │   ├── lib/
-│   │   └── api.ts            # API client with all functions
-│   ├── App.tsx               # Main app component with toast integration
-│   ├── main.tsx             # React entry point
-│   ├── index.css            # Global styles (TailwindCSS)
-│   └── App.css              # App-specific styles
-├── index.html               # HTML entry point
-├── package.json             # Dependencies and scripts
-├── tsconfig.json            # TypeScript configuration
-├── tailwind.config.js       # TailwindCSS configuration
-├── postcss.config.js        # PostCSS configuration
-├── vite.config.ts           # Vite configuration
-└── .env                     # Environment variables
+│   │   └── api.ts              # API client with all functions
+│   ├── App.tsx                 # Main app component with routing
+│   ├── main.tsx               # React entry point
+│   ├── index.css              # Global styles (TailwindCSS)
+│   └── App.css                # App-specific styles
+├── index.html                 # HTML entry point
+├── package.json               # Dependencies and scripts
+├── tsconfig.json              # TypeScript configuration
+├── tailwind.config.js         # TailwindCSS configuration
+├── postcss.config.js          # PostCSS configuration
+├── vite.config.ts             # Vite configuration
+└── .env                       # Environment variables
 ```
 
 ## Backend Integration
@@ -151,3 +177,5 @@ The application includes:
 - ✅ Toast notifications for API success/error feedback
 - ✅ Automatic API test on app load
 - ✅ Comprehensive error handling with user-friendly messages
+- ✅ Client-side routing with React Router
+- ✅ Error boundary for graceful error handling
