@@ -9,6 +9,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { validateAmount, splitEqually } from './money';
 
+// Exact cents helpers to avoid FP drift
+const toCents = (n: number) => Math.round(n * 100);
+const fromCents = (c: number) => Number((c / 100).toFixed(2));
+
 export type UserId = 'A' | 'B';
 export type TransactionType = 'GROUP' | 'SETTLEMENT' | 'INITIAL';
 export type Category =
@@ -97,27 +101,29 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
   // Determine the other user
   const otherUserId: UserId = payerId === 'A' ? 'B' : 'A';
 
-  // Use the money module's splitEqually function for consistent banker's rounding
-  const split = splitEqually(amount);
-  
-  // Create transaction ID
+  // --- use integer cents end-to-end ---
+  const totalCents = toCents(amount);
+  const halfCents = Math.floor(totalCents / 2);
+  const remainderCents = totalCents % 2;
+
   const txId = uuidv4();
   const createdAt = new Date().toISOString();
 
   const entries: LedgerEntry[] = [];
 
-  // 1. Debit payer's cash (they paid the expense)
+  // 1) CASH (payer pays full)
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.CASH(payerId),
     userId: payerId,
-    delta: -amount, // Negative: cash goes out
+    delta: fromCents(-totalCents),
     createdAt,
   });
 
-  // 2. Credit both users' expense accounts (split evenly)
+  // 2) EXPENSE (budgets): exactly half each; remainder does NOT go to budgets
+  const expenseEach = halfCents; // integer cents
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -125,10 +131,9 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(payerId, category),
     userId: payerId,
     category,
-    delta: split.perUserShare, // Positive: expense increases
+    delta: fromCents(expenseEach),
     createdAt,
   });
-
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -136,39 +141,38 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(otherUserId, category),
     userId: otherUserId,
     category,
-    delta: split.perUserShare, // Positive: expense increases
+    delta: fromCents(expenseEach),
     createdAt,
   });
 
-  // 3. Credit payer's receivable (other user owes their half + remainder)
-  const receivableAmount = split.perUserShare + split.remainder;
+  // 3) Inter-user balances: other owes payer half + any remainder
+  const dueFromCents = halfCents + remainderCents;
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.DUE_FROM(payerId, otherUserId),
     userId: payerId,
-    delta: receivableAmount, // Positive: asset increases
+    delta: fromCents(dueFromCents),
     createdAt,
   });
-
-  // 4. Debit other user's payable
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.DUE_TO(otherUserId, payerId),
     userId: otherUserId,
-    delta: -receivableAmount, // Negative: liability increases
+    delta: fromCents(-dueFromCents),
     createdAt,
   });
 
-  // Verify transaction is balanced
-  const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
-  if (Math.abs(totalDelta) > 0.001) { // Increased tolerance for floating-point precision
-    throw new Error(
-      `Transaction not balanced: total delta = ${totalDelta}`
-    );
+  // 4) Validate strictly in cents (no FP)
+  const totalDeltaCents = entries.reduce(
+    (sum, e) => sum + toCents(e.delta),
+    0
+  );
+  if (totalDeltaCents !== 0) {
+    throw new Error(`Transaction not balanced: total delta = ${fromCents(totalDeltaCents)}`);
   }
 
   return entries;
@@ -258,11 +262,12 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
   });
 
   // Verify transaction is balanced
-  const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
-  if (Math.abs(totalDelta) > 0.001) { // Increased tolerance for floating-point precision
-    throw new Error(
-      `Transaction not balanced: total delta = ${totalDelta}`
-    );
+  const totalDeltaCents = entries.reduce(
+    (sum, e) => sum + toCents(e.delta),
+    0
+  );
+  if (totalDeltaCents !== 0) {
+    throw new Error(`Transaction not balanced: total delta = ${fromCents(totalDeltaCents)}`);
   }
 
   return entries;
@@ -280,11 +285,12 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
  */
 export function validateLedgerEntries(entries: LedgerEntry[]): boolean {
   // Check balance
-  const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
-  if (Math.abs(totalDelta) > 0.001) { // Increased tolerance for floating-point precision
-    throw new Error(
-      `Transaction not balanced: total delta = ${totalDelta}`
-    );
+  const totalDeltaCents = entries.reduce(
+    (sum, e) => sum + toCents(e.delta),
+    0
+  );
+  if (totalDeltaCents !== 0) {
+    throw new Error(`Transaction not balanced: total delta = ${fromCents(totalDeltaCents)}`);
   }
 
   // Check that DUE_FROM and DUE_TO entries are properly paired
