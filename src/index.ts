@@ -7,6 +7,7 @@
  */
 
 import express from 'express';
+import cors from 'cors';
 import { errorHandler, NotFoundError } from './adapters/http/errorHandler';
 import { healthRouter } from './adapters/http/healthRouter';
 import { apiRouter } from './adapters/http/routes';
@@ -15,6 +16,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
