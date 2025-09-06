@@ -24,9 +24,53 @@ Content-Type: application/json
 
 {
   "payerId": "A",
-  "amount": "100.00",
+  "amount": "120.00",
   "category": "food"
 }
+
+# Expected response:
+# {
+#   "transaction": {
+#     "id": "3aba1043-e4bd-42e7-8ffa-77679a1b1246",
+#     "type": "GROUP",
+#     "payerId": "A",
+#     "amount": 120,
+#     "category": "food",
+#     "perUserShare": 60,
+#     "remainder": 0,
+#     "createdAt": "2025-09-06T08:39:14.790Z"
+#   },
+#   "summary": {
+#     "users": [
+#       {
+#         "userId": "A",
+#         "walletBalance": 210,
+#         "budgetByCategory": {
+#           "food": 120,
+#           "groceries": 40,
+#           "transport": 25,
+#           "entertainment": 0,
+#           "other": 0
+#         }
+#       },
+#       {
+#         "userId": "B",
+#         "walletBalance": 420,
+#         "budgetByCategory": {
+#           "food": 120,
+#           "groceries": 40,
+#           "transport": 25,
+#           "entertainment": 0,
+#           "other": 0
+#         }
+#       }
+#     ],
+#     "netDue": {
+#       "owes": "B",
+#       "amount": 105
+#     }
+#   }
+# }
 
 ### Create Group Expense with Idempotency Key
 POST {{baseUrl}}/transactions
@@ -98,8 +142,50 @@ Content-Type: application/json
 {
   "fromUserId": "B",
   "toUserId": "A",
-  "amount": "30.00"
+  "amount": "60.00"
 }
+
+# Expected response:
+# {
+#   "settlement": {
+#     "id": "a40c13bf-0e4c-464a-a449-e54e8304a6ba",
+#     "type": "SETTLEMENT",
+#     "fromUserId": "B",
+#     "toUserId": "A",
+#     "amount": 60,
+#     "createdAt": "2025-09-06T08:39:16.728Z"
+#   },
+#   "summary": {
+#     "users": [
+#       {
+#         "userId": "A",
+#         "walletBalance": 270,
+#         "budgetByCategory": {
+#           "food": 120,
+#           "groceries": 40,
+#           "transport": 25,
+#           "entertainment": 0,
+#           "other": 0
+#         }
+#       },
+#       {
+#         "userId": "B",
+#         "walletBalance": 360,
+#         "budgetByCategory": {
+#           "food": 120,
+#           "groceries": 40,
+#           "transport": 25,
+#           "entertainment": 0,
+#           "other": 0
+#         }
+#       }
+#     ],
+#     "netDue": {
+#       "owes": "B",
+#       "amount": 45
+#     }
+#   }
+# }
 
 ### Settlement with Idempotency Key
 POST {{baseUrl}}/settle
@@ -121,6 +207,14 @@ Content-Type: application/json
   "toUserId": "A",
   "amount": "1000.00"
 }
+
+# Expected error response:
+# {
+#   "type": "validation-error",
+#   "title": "Invalid request body",
+#   "detail": "Over-settlement: Attempted to settle 1000 but only 95 is owed",
+#   "status": 422
+# }
 
 ### Validation Error - Invalid Amount
 POST {{baseUrl}}/transactions
@@ -179,10 +273,54 @@ POST {{baseUrl}}/transactions
 Content-Type: application/json
 
 {
-  "payerId": "B",
+  "payerId": "A",
   "amount": "100.01",
   "category": "groceries"
 }
+
+# Expected response shows remainder handling:
+# {
+#   "transaction": {
+#     "id": "9ccddad9-93ff-45a9-a68e-fe8e575951a6",
+#     "type": "GROUP",
+#     "payerId": "A",
+#     "amount": 100.01,
+#     "category": "groceries",
+#     "perUserShare": 50,
+#     "remainder": 0.01,
+#     "createdAt": "2025-09-06T08:39:20.864Z"
+#   },
+#   "summary": {
+#     "users": [
+#       {
+#         "userId": "A",
+#         "walletBalance": 169.99,
+#         "budgetByCategory": {
+#           "food": 120,
+#           "groceries": 90.01,
+#           "transport": 25,
+#           "entertainment": 0,
+#           "other": 0
+#         }
+#       },
+#       {
+#         "userId": "B",
+#         "walletBalance": 360,
+#         "budgetByCategory": {
+#           "food": 120,
+#           "groceries": 90,
+#           "transport": 25,
+#           "entertainment": 0,
+#           "other": 0
+#         }
+#       }
+#     ],
+#     "netDue": {
+#       "owes": "B",
+#       "amount": 95
+#     }
+#   }
+# }
 
 ### Get Updated Summaries After Transactions
 GET {{baseUrl}}/users

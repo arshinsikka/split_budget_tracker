@@ -1,11 +1,82 @@
 /**
  * Projection services for computing user summaries from ledger entries
- * 
+ *
  * Pure functions that compute wallet balances, budget summaries,
  * and net due amounts from the ledger entries.
  */
 
 import { LedgerEntry, UserId, Category } from '../lib/ledger';
+
+/**
+ * Convert dollars to integer cents
+ */
+function toCents(dollars: number): number {
+  return Math.round(dollars * 100);
+}
+
+/**
+ * Convert integer cents to dollars (currently unused but available for future use)
+ */
+// function fromCents(cents: number): number {
+//   return cents / 100;
+// }
+
+export interface UserSummaryCents {
+  userId: UserId;
+  wallet: {
+    balanceCents: number;
+  };
+  spendByCategory: Array<{
+    name: string;
+    spentCents: number;
+  }>;
+  netBetweenUsersCents: {
+    owes: number;
+    isOwed: number;
+  };
+}
+
+/**
+ * Compute user summary in integer cents format
+ *
+ * This function computes three lanes of financial data:
+ * 1. Wallet (cash): out-of-pocket payments and reimbursements
+ * 2. Spend (consumption): your share of each bill for budgeting
+ * 3. Settle (net debt): what one user owes the other
+ */
+export function computeUserSummaryCents(userId: UserId, entries: LedgerEntry[]): UserSummaryCents {
+  const walletBalance = computeWalletBalance(userId, entries);
+  const budgetByCategory = computeBudgetByCategory(userId, entries);
+  const netDue = computeNetDue(entries);
+
+  // Convert spend by category to array format
+  const spendByCategory = Object.entries(budgetByCategory).map(([name, spent]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize first letter
+    spentCents: toCents(spent),
+  }));
+
+  // Calculate net between users
+  let owes = 0;
+  let isOwed = 0;
+
+  if (netDue.owes === userId) {
+    owes = toCents(netDue.amount);
+  } else if (netDue.owes && netDue.owes !== userId) {
+    isOwed = toCents(netDue.amount);
+  }
+
+  return {
+    userId,
+    wallet: {
+      balanceCents: toCents(walletBalance),
+    },
+    spendByCategory,
+    netBetweenUsersCents: {
+      owes,
+      isOwed,
+    },
+  };
+}
 
 /**
  * Round money values to 2 decimal places to ensure consistent formatting
@@ -27,7 +98,7 @@ export interface NetDue {
 
 /**
  * Compute wallet balance for a user
- * 
+ *
  * Wallet balance = sum of all CASH deltas for the user
  */
 export function computeWalletBalance(userId: UserId, entries: LedgerEntry[]): number {
@@ -40,10 +111,13 @@ export function computeWalletBalance(userId: UserId, entries: LedgerEntry[]): nu
 
 /**
  * Compute budget by category for a user
- * 
+ *
  * Budget = sum of all EXPENSE deltas for the user by category
  */
-export function computeBudgetByCategory(userId: UserId, entries: LedgerEntry[]): Record<Category, number> {
+export function computeBudgetByCategory(
+  userId: UserId,
+  entries: LedgerEntry[]
+): Record<Category, number> {
   const budget: Record<Category, number> = {
     food: 0,
     groceries: 0,
@@ -71,9 +145,9 @@ export function computeBudgetByCategory(userId: UserId, entries: LedgerEntry[]):
 
 /**
  * Compute net due between users
- * 
+ *
  * Returns who owes whom and how much based on DUE_FROM/DUE_TO balances
- * 
+ *
  * The net due is calculated as: (A's receivable from B) - (B's receivable from A)
  * If positive: B owes A
  * If negative: A owes B
@@ -94,7 +168,8 @@ export function computeNetDue(entries: LedgerEntry[]): NetDue {
   // If negative: A owes B (B has a receivable from A)
   const netDue = dueFromAToB - dueFromBToA;
 
-  if (Math.abs(netDue) < 0.001) { // Increased tolerance for floating-point precision
+  if (Math.abs(netDue) < 0.001) {
+    // Increased tolerance for floating-point precision
     // Balanced
     return { owes: null, amount: 0 };
   } else if (netDue > 0) {
@@ -121,10 +196,7 @@ export function computeUserSummary(userId: UserId, entries: LedgerEntry[]): User
  * Compute summaries for both users
  */
 export function computeUserSummaries(entries: LedgerEntry[]): UserSummary[] {
-  return [
-    computeUserSummary('A', entries),
-    computeUserSummary('B', entries),
-  ];
+  return [computeUserSummary('A', entries), computeUserSummary('B', entries)];
 }
 
 /**

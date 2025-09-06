@@ -6,11 +6,9 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">
-              Split Budget Tracker
-            </h1>
+            <h1 className="text-xl font-bold text-gray-900">Split Budget Tracker</h1>
           </div>
-          
+
           <div className="flex items-center space-x-8">
             <NavLink
               to="/"
@@ -25,7 +23,7 @@ export function Navigation() {
             >
               Dashboard
             </NavLink>
-            
+
             <NavLink
               to="/transactions"
               className={({ isActive }) =>
@@ -38,7 +36,7 @@ export function Navigation() {
             >
               Transactions
             </NavLink>
-            
+
             <NavLink
               to="/settle"
               className={({ isActive }) =>

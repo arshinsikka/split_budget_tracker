@@ -1,6 +1,6 @@
 /**
  * Zod validation schemas for API requests
- * 
+ *
  * Defines validation rules for request bodies, headers,
  * and query parameters to ensure data integrity.
  */
@@ -14,7 +14,7 @@ import { z } from 'zod';
 export const MoneySchema = z
   .string()
   .regex(/^\d+\.\d{2}$/, 'Amount must be a string with exactly 2 decimal places')
-  .refine((val) => {
+  .refine(val => {
     const num = parseFloat(val);
     return num > 0 && num <= 1000000;
   }, 'Amount must be positive and less than 1,000,000');
@@ -41,14 +41,16 @@ export const GroupExpenseInputSchema = z.object({
 /**
  * Settlement input validation
  */
-export const SettlementInputSchema = z.object({
-  fromUserId: UserIdSchema,
-  toUserId: UserIdSchema,
-  amount: MoneySchema,
-}).refine((data) => data.fromUserId !== data.toUserId, {
-  message: 'Cannot settle with yourself',
-  path: ['fromUserId'],
-});
+export const SettlementInputSchema = z
+  .object({
+    fromUserId: UserIdSchema,
+    toUserId: UserIdSchema,
+    amount: MoneySchema,
+  })
+  .refine(data => data.fromUserId !== data.toUserId, {
+    message: 'Cannot settle with yourself',
+    path: ['fromUserId'],
+  });
 
 /**
  * Idempotency key header validation

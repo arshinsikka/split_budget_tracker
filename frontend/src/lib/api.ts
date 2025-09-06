@@ -1,4 +1,9 @@
-import { CreateTransactionSchema, SettlementSchema, type CreateTransactionRequest, type SettlementRequest } from './validation';
+import {
+  CreateTransactionSchema,
+  SettlementSchema,
+  type CreateTransactionRequest,
+  type SettlementRequest,
+} from './validation';
 
 // Environment configuration
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -34,10 +39,7 @@ export class APIError extends Error {
 }
 
 // Generic fetch wrapper with enhanced error handling and debug logging
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_URL}${endpoint}`;
 
   // Merge headers ONCE and set them last so they cannot be overwritten
@@ -93,7 +95,9 @@ async function apiRequest<T>(
 export const api = {
   // Health check
   async getHealth() {
-    return apiRequest<{ status: string; timestamp: string; service: string; version: string }>('/health');
+    return apiRequest<{ status: string; timestamp: string; service: string; version: string }>(
+      '/health'
+    );
   },
 
   // Get all users
@@ -105,7 +109,7 @@ export const api = {
   async createTransaction(data: CreateTransactionRequest, idempotencyKey?: string) {
     // Validate data before sending
     const validatedData = CreateTransactionSchema.parse(data);
-    
+
     const headers: Record<string, string> = {};
     if (idempotencyKey) {
       headers['Idempotency-Key'] = idempotencyKey;
@@ -127,7 +131,7 @@ export const api = {
   async settle(data: SettlementRequest, idempotencyKey?: string) {
     // Validate data before sending
     const validatedData = SettlementSchema.parse(data);
-    
+
     const headers: Record<string, string> = {};
     if (idempotencyKey) {
       headers['Idempotency-Key'] = idempotencyKey;

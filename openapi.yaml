@@ -3,20 +3,20 @@ info:
   title: Split Budget Tracker API
   description: |
     A backend API for tracking shared expenses between two friends with double-entry ledger accounting.
-    
+
     ## Key Features
     - Double-entry ledger for mathematical consistency
     - Equal splitting of group expenses
     - Category-based budget tracking
     - Idempotency support for reliable retries
-    - Banker's rounding to 2 decimal places
-    
+    - Integer-cent arithmetic with banker's rounding
+
     ## Users
     The system supports exactly two users: "A" and "B"
-    
-    ## Currency
-    All amounts are in SGD (Singapore Dollar)
-    
+
+    ## Money Handling
+    All amounts are handled as numbers with 2 decimal places using integer-cent arithmetic internally.
+
     ## Idempotency
     POST endpoints support optional `Idempotency-Key` header to prevent duplicate processing.
   version: 0.1.0
@@ -43,17 +43,17 @@ paths:
                 properties:
                   status:
                     type: string
-                    example: "healthy"
+                    example: 'healthy'
                   timestamp:
                     type: string
                     format: date-time
-                    example: "2024-01-15T10:30:00.000Z"
+                    example: '2024-01-15T10:30:00.000Z'
                   service:
                     type: string
-                    example: "split-budget-tracker"
+                    example: 'split-budget-tracker'
                   version:
                     type: string
-                    example: "0.1.0"
+                    example: '0.1.0'
 
   /seed/init:
     post:
@@ -61,7 +61,7 @@ paths:
       description: |
         Reset the in-memory state and set initial wallet balances for both users.
         This endpoint is primarily for testing and demonstration purposes.
-        
+
         **Demo Mode**: Add `?demo=true` to preload sample transactions:
         - A pays 120 food
         - B pays 80 groceries  
@@ -72,7 +72,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: ["true", "false"]
+            enum: ['true', 'false']
           description: Enable demo mode to preload sample transactions
       requestBody:
         required: false
@@ -110,7 +110,7 @@ paths:
                     $ref: '#/components/schemas/NetDue'
               example:
                 users:
-                  - userId: "A"
+                  - userId: 'A'
                     walletBalance: 500
                     budgetByCategory:
                       food: 0
@@ -118,7 +118,7 @@ paths:
                       transport: 0
                       entertainment: 0
                       other: 0
-                  - userId: "B"
+                  - userId: 'B'
                     walletBalance: 500
                     budgetByCategory:
                       food: 0
@@ -152,7 +152,7 @@ paths:
                     $ref: '#/components/schemas/NetDue'
               example:
                 users:
-                  - userId: "A"
+                  - userId: 'A'
                     walletBalance: 450
                     budgetByCategory:
                       food: 75.50
@@ -160,7 +160,7 @@ paths:
                       transport: 45.25
                       entertainment: 30
                       other: 0
-                  - userId: "B"
+                  - userId: 'B'
                     walletBalance: 470
                     budgetByCategory:
                       food: 75.50
@@ -169,7 +169,7 @@ paths:
                       entertainment: 30
                       other: 0
                 netDue:
-                  owes: "B"
+                  owes: 'B'
                   amount: 20
 
   /summary:
@@ -182,7 +182,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: ["A", "B"]
+            enum: ['A', 'B']
           description: User ID to get summary for
       responses:
         '200':
@@ -192,7 +192,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserDashboard'
               example:
-                userId: "A"
+                userId: 'A'
                 walletBalance: 440
                 budgetByCategory:
                   food: 60
@@ -201,7 +201,7 @@ paths:
                   entertainment: 0
                   other: 0
                 netPosition:
-                  owes: "B"
+                  owes: 'B'
                   amount: 60
         '422':
           $ref: '#/components/responses/ValidationError'
@@ -218,8 +218,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/DebtSummary'
               example:
-                owes: "B"
-                to: "A"
+                owes: 'B'
+                to: 'A'
                 amount: 60
         '422':
           $ref: '#/components/responses/ValidationError'
@@ -244,18 +244,18 @@ paths:
                         - $ref: '#/components/schemas/Settlement'
               example:
                 transactions:
-                  - id: "tx-001"
-                    type: "GROUP"
-                    createdAt: "2024-01-15T10:00:00.000Z"
-                    payerId: "A"
+                  - id: 'tx-001'
+                    type: 'GROUP'
+                    createdAt: '2024-01-15T10:00:00.000Z'
+                    payerId: 'A'
                     amount: 100
-                    category: "food"
+                    category: 'food'
                     perUserShare: 50
-                  - id: "settle-001"
-                    type: "SETTLEMENT"
-                    createdAt: "2024-01-15T11:00:00.000Z"
-                    fromUserId: "B"
-                    toUserId: "A"
+                  - id: 'settle-001'
+                    type: 'SETTLEMENT'
+                    createdAt: '2024-01-15T11:00:00.000Z'
+                    fromUserId: 'B'
+                    toUserId: 'A'
                     amount: 30
 
     post:
@@ -274,7 +274,7 @@ paths:
               properties:
                 payerId:
                   type: string
-                  enum: ["A", "B"]
+                  enum: ['A', 'B']
                   description: ID of the user who paid the expense
                 amount:
                   $ref: '#/components/schemas/Money'
@@ -282,9 +282,9 @@ paths:
                 category:
                   $ref: '#/components/schemas/Category'
             example:
-              payerId: "A"
+              payerId: 'A'
               amount: 100
-              category: "food"
+              category: 'food'
       responses:
         '201':
           description: Group expense created successfully
@@ -306,34 +306,34 @@ paths:
                         $ref: '#/components/schemas/NetDue'
               example:
                 transaction:
-                  id: "tx-001"
-                  type: "GROUP"
-                  createdAt: "2024-01-15T10:00:00.000Z"
-                  payerId: "A"
+                  id: 'tx-001'
+                  type: 'GROUP'
+                  createdAt: '2024-01-15T10:00:00.000Z'
+                  payerId: 'A'
                   amount: 100
-                  category: "food"
+                  category: 'food'
                   perUserShare: 50
                 summary:
                   users:
-                    - userId: "A"
-                      walletBalance: "450.00"
+                    - userId: 'A'
+                      walletBalance: 450
                       budgetByCategory:
-                        food: "75.50"
-                        groceries: "120.00"
-                        transport: "45.25"
-                        entertainment: "30.00"
-                        other: "0.00"
-                    - userId: "B"
-                      walletBalance: "470.00"
+                        food: 75.5
+                        groceries: 120
+                        transport: 45.25
+                        entertainment: 30
+                        other: 0
+                    - userId: 'B'
+                      walletBalance: 470
                       budgetByCategory:
-                        food: "75.50"
-                        groceries: "120.00"
-                        transport: "45.25"
-                        entertainment: "30.00"
-                        other: "0.00"
+                        food: 75.5
+                        groceries: 120
+                        transport: 45.25
+                        entertainment: 30
+                        other: 0
                   netDue:
-                    owes: "B"
-                    amount: "20.00"
+                    owes: 'B'
+                    amount: 20
         '400':
           $ref: '#/components/responses/BadRequest'
         '422':
@@ -358,18 +358,18 @@ paths:
               properties:
                 fromUserId:
                   type: string
-                  enum: ["A", "B"]
+                  enum: ['A', 'B']
                   description: User making the payment
                 toUserId:
                   type: string
-                  enum: ["A", "B"]
+                  enum: ['A', 'B']
                   description: User receiving the payment
                 amount:
                   $ref: '#/components/schemas/Money'
                   description: Amount being settled
             example:
-              fromUserId: "B"
-              toUserId: "A"
+              fromUserId: 'B'
+              toUserId: 'A'
               amount: 30
       responses:
         '201':
@@ -392,32 +392,32 @@ paths:
                         $ref: '#/components/schemas/NetDue'
               example:
                 settlement:
-                  id: "settle-001"
-                  type: "SETTLEMENT"
-                  createdAt: "2024-01-15T11:00:00.000Z"
-                  fromUserId: "B"
-                  toUserId: "A"
+                  id: 'settle-001'
+                  type: 'SETTLEMENT'
+                  createdAt: '2024-01-15T11:00:00.000Z'
+                  fromUserId: 'B'
+                  toUserId: 'A'
                   amount: 30
                 summary:
                   users:
-                    - userId: "A"
-                      walletBalance: "480.00"
+                    - userId: 'A'
+                      walletBalance: 480
                       budgetByCategory:
-                        food: "75.50"
-                        groceries: "120.00"
-                        transport: "45.25"
-                        entertainment: "30.00"
-                        other: "0.00"
-                    - userId: "B"
-                      walletBalance: "440.00"
+                        food: 75.5
+                        groceries: 120
+                        transport: 45.25
+                        entertainment: 30
+                        other: 0
+                    - userId: 'B'
+                      walletBalance: 440
                       budgetByCategory:
-                        food: "75.50"
-                        groceries: "120.00"
-                        transport: "45.25"
-                        entertainment: "30.00"
-                        other: "0.00"
+                        food: 75.5
+                        groceries: 120
+                        transport: 45.25
+                        entertainment: 30
+                        other: 0
                   netDue:
-                    owes: "B"
+                    owes: 'B'
                     amount: 10
         '400':
           $ref: '#/components/responses/OverSettlement'
@@ -431,7 +431,7 @@ components:
     Money:
       type: number
       format: float
-      description: Amount in SGD with up to 2 decimal places
+      description: Amount with up to 2 decimal places
       example: 100.00
       minimum: 0.01
       maximum: 1000000.00
@@ -460,19 +460,19 @@ components:
         id:
           type: string
           description: Unique transaction identifier
-          example: "tx-001"
+          example: 'tx-001'
         type:
           type: string
-          enum: ["GROUP"]
+          enum: ['GROUP']
           description: Transaction type
         createdAt:
           type: string
           format: date-time
           description: When the transaction was created
-          example: "2024-01-15T10:00:00.000Z"
+          example: '2024-01-15T10:00:00.000Z'
         payerId:
           type: string
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User who paid the expense
         amount:
           $ref: '#/components/schemas/Money'
@@ -497,23 +497,23 @@ components:
         id:
           type: string
           description: Unique settlement identifier
-          example: "settle-001"
+          example: 'settle-001'
         type:
           type: string
-          enum: ["SETTLEMENT"]
+          enum: ['SETTLEMENT']
           description: Transaction type
         createdAt:
           type: string
           format: date-time
           description: When the settlement was created
-          example: "2024-01-15T11:00:00.000Z"
+          example: '2024-01-15T11:00:00.000Z'
         fromUserId:
           type: string
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User making the payment
         toUserId:
           type: string
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User receiving the payment
         amount:
           $ref: '#/components/schemas/Money'
@@ -528,7 +528,7 @@ components:
       properties:
         userId:
           type: string
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User identifier
         walletBalance:
           $ref: '#/components/schemas/Money'
@@ -554,7 +554,7 @@ components:
         owes:
           type: string
           nullable: true
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User who owes money (null if balanced)
         amount:
           $ref: '#/components/schemas/Money'
@@ -570,7 +570,7 @@ components:
       properties:
         userId:
           type: string
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User identifier
         walletBalance:
           $ref: '#/components/schemas/Money'
@@ -599,7 +599,7 @@ components:
         owes:
           type: string
           nullable: true
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User who owes money (null if balanced)
         amount:
           $ref: '#/components/schemas/Money'
@@ -615,12 +615,12 @@ components:
         owes:
           type: string
           nullable: true
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User who owes money (null if balanced)
         to:
           type: string
           nullable: true
-          enum: ["A", "B"]
+          enum: ['A', 'B']
           description: User who is owed money (null if balanced)
         amount:
           $ref: '#/components/schemas/Money'
@@ -636,15 +636,15 @@ components:
         type:
           type: string
           description: Error type identifier
-          example: "validation-error"
+          example: 'validation-error'
         title:
           type: string
           description: Human-readable error title
-          example: "Invalid amount"
+          example: 'Invalid amount'
         detail:
           type: string
           description: Detailed error message
-          example: "Amount must be positive and have at most 2 decimal places"
+          example: 'Amount must be positive and have at most 2 decimal places'
         status:
           type: integer
           description: HTTP status code
@@ -658,9 +658,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
-            type: "bad-request"
-            title: "Bad Request"
-            detail: "Invalid request parameters"
+            type: 'bad-request'
+            title: 'Bad Request'
+            detail: 'Invalid request parameters'
             status: 400
 
     ValidationError:
@@ -670,9 +670,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
-            type: "validation-error"
-            title: "Invalid request body"
-            detail: "Invalid request body"
+            type: 'validation-error'
+            title: 'Invalid request body'
+            detail: 'Invalid request body'
             status: 422
 
     OverSettlement:
@@ -682,9 +682,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
-            type: "over-settlement"
-            title: "Over-settlement"
-            detail: "Cannot settle more than what is owed. Current balance: 50.00, requested: 60.00"
+            type: 'over-settlement'
+            title: 'Over-settlement'
+            detail: 'Cannot settle more than what is owed. Current balance: 50.00, requested: 60.00'
             status: 400
 
     IdempotencyConflict:
@@ -694,9 +694,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
-            type: "idempotency-conflict"
-            title: "Idempotency conflict"
-            detail: "Request with same key but different body already exists"
+            type: 'idempotency-conflict'
+            title: 'Idempotency conflict'
+            detail: 'Request with same key but different body already exists'
             status: 409
 
     NotFound:
@@ -706,7 +706,7 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           example:
-            type: "not-found"
-            title: "Resource not found"
-            detail: "Route not found"
+            type: 'not-found'
+            title: 'Resource not found'
+            detail: 'Route not found'
             status: 404

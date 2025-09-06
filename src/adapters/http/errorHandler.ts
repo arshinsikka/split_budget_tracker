@@ -67,12 +67,15 @@ export function errorHandler(
       : 'Internal server error';
 
   // Return RFC 7807 Problem Details format
-  res.status(statusCode).type('application/problem+json').json({
-    type: getErrorType(error.name),
-    title: getErrorTitle(error.name),
-    detail: message,
-    status: statusCode,
-  });
+  res
+    .status(statusCode)
+    .type('application/problem+json')
+    .json({
+      type: getErrorType(error.name),
+      title: getErrorTitle(error.name),
+      detail: message,
+      status: statusCode,
+    });
 }
 
 function getErrorType(errorName: string): string {

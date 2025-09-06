@@ -43,11 +43,13 @@ Dues: -30.00 to DUE_FROM:A->B, -30.00 to DUE_TO:B->A
 We use **banker's rounding** to 2 decimal places. When splitting creates a 0.01 remainder, assign the odd cent to the payer's receivable.
 
 **Example**: A pays $101.00 for food
+
 - Split: $101.00 ÷ 2 = $50.50 each
 - Rounding: $50.50 → $50.50 (no change)
 - Result: Each owes $50.50, A is owed $50.50 by B
 
-**Example**: A pays $100.01 for groceries  
+**Example**: A pays $100.01 for groceries
+
 - Split: $100.01 ÷ 2 = $50.005 each
 - Rounding: $50.005 → $50.01 (banker's rounding)
 - Result: Each owes $50.01, A is owed $50.01 by B
@@ -61,6 +63,7 @@ Support optional `Idempotency-Key` header on POST endpoints:
 - **Duplicate key + different body**: Return 409 Conflict with RFC7807 error
 
 **Example**:
+
 ```http
 POST /transactions
 Idempotency-Key: abc123
@@ -81,20 +84,21 @@ Idempotency-Key: abc123
 All API responses use **numbers with 2 decimal places** for money amounts, not strings. This provides better JSON serialization and avoids string parsing issues.
 
 **Example response**:
+
 ```json
 {
   "userId": "A",
-  "walletBalance": 440.00,
+  "walletBalance": 440.0,
   "budgetByCategory": {
-    "food": 60.00,
-    "groceries": 0.00,
-    "transport": 0.00,
-    "entertainment": 0.00,
-    "other": 0.00
+    "food": 60.0,
+    "groceries": 0.0,
+    "transport": 0.0,
+    "entertainment": 0.0,
+    "other": 0.0
   },
   "netPosition": {
     "owes": null,
-    "amount": 0.00
+    "amount": 0.0
   }
 }
 ```
@@ -106,20 +110,21 @@ All API responses use **numbers with 2 decimal places** for money amounts, not s
 Returns a compact user dashboard with wallet balance, budget by category, and net position relative to the other user.
 
 **Response format**:
+
 ```json
 {
   "userId": "A",
-  "walletBalance": 440.00,
+  "walletBalance": 440.0,
   "budgetByCategory": {
-    "food": 60.00,
-    "groceries": 0.00,
-    "transport": 0.00,
-    "entertainment": 0.00,
-    "other": 0.00
+    "food": 60.0,
+    "groceries": 0.0,
+    "transport": 0.0,
+    "entertainment": 0.0,
+    "other": 0.0
   },
   "netPosition": {
     "owes": "B",
-    "amount": 60.00
+    "amount": 60.0
   }
 }
 ```
@@ -129,20 +134,22 @@ Returns a compact user dashboard with wallet balance, budget by category, and ne
 Returns simplified debt summary showing who owes whom and how much.
 
 **Response format**:
+
 ```json
 {
   "owes": "B",
-  "to": "A", 
-  "amount": 60.00
+  "to": "A",
+  "amount": 60.0
 }
 ```
 
 When no debt exists:
+
 ```json
 {
   "owes": null,
   "to": null,
-  "amount": 0.00
+  "amount": 0.0
 }
 ```
 
@@ -151,7 +158,7 @@ When no debt exists:
 Initializes the system with sample data for demonstration and testing purposes. Preloads three transactions:
 
 1. A pays 120.00 food
-2. B pays 80.00 groceries  
+2. B pays 80.00 groceries
 3. A pays 50.00 transport
 
 **Response**: Current state after demo data creation.
@@ -166,6 +173,7 @@ Use RFC 7807 Problem Details with these types:
 - `not-found` (404): Unknown routes
 
 **Example error**:
+
 ```json
 {
   "type": "validation-error",
@@ -178,12 +186,14 @@ Use RFC 7807 Problem Details with these types:
 ## Consequences
 
 ### Positive
+
 - **Correctness**: Double-entry ensures mathematical consistency
 - **Auditability**: Complete transaction history with clear causality
 - **Flexibility**: Easy to extend with new transaction types
 - **Reliability**: Idempotency prevents duplicate processing
 
 ### Negative
+
 - **Complexity**: More complex than simple totals
 - **Performance**: Multiple account updates per transaction
 - **Storage**: More data to persist (though minimal for 2 users)
@@ -191,13 +201,17 @@ Use RFC 7807 Problem Details with these types:
 ## Alternatives Considered
 
 ### Simple Totals (Rejected)
+
 Track running totals of who owes whom. Simpler but harder to audit and correct errors.
 
 ### Single Account Per User (Rejected)
+
 One balance per user. Loses category-level budget tracking.
 
 ### Floating Point (Rejected)
+
 Use floating point for amounts. Prone to rounding errors in financial calculations.
 
 ### No Idempotency (Rejected)
+
 Simpler but allows duplicate transactions on retries.

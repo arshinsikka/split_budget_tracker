@@ -57,7 +57,8 @@ export function HealthCheck() {
             Service: {health?.service} v{health?.version}
           </p>
           <p className="text-green-600 text-sm">
-            Last checked: {health?.timestamp ? new Date(health.timestamp).toLocaleString() : 'Unknown'}
+            Last checked:{' '}
+            {health?.timestamp ? new Date(health.timestamp).toLocaleString() : 'Unknown'}
           </p>
         </div>
       </div>

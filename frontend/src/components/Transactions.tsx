@@ -25,7 +25,7 @@ export function Transactions() {
   const [formData, setFormData] = useState({
     payer: 'A' as UserId,
     amount: '',
-    category: 'food' as Category
+    category: 'food' as Category,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -56,7 +56,7 @@ export function Transactions() {
       style: 'currency',
       currency: 'SGD',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -66,7 +66,7 @@ export function Transactions() {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -93,10 +93,10 @@ export function Transactions() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Clear previous errors
     setFormErrors({});
-    
+
     try {
       // Parse and validate amount
       const amount = parseFloat(formData.amount);
@@ -113,28 +113,28 @@ export function Transactions() {
       const request: CreateTransactionRequest = {
         payerId: formData.payer,
         amount: amountString,
-        category: formData.category
+        category: formData.category,
       };
 
       // Validate with Zod
       CreateTransactionSchema.parse(request);
 
       setSubmitting(true);
-      
+
       // Generate idempotency key
       const idempotencyKey = `transaction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       await api.createTransaction(request, idempotencyKey);
-      
+
       // Clear form and refresh transactions
       setFormData({ payer: 'A', amount: '', category: 'food' });
       setFormErrors({});
       await loadTransactions();
-      
+
       toast.success('Group expense added successfully!');
     } catch (error) {
       console.error('Failed to create transaction:', error);
-      
+
       if (error instanceof z.ZodError) {
         // Handle validation errors
         const fieldErrors: Record<string, string> = {};
@@ -165,24 +165,22 @@ export function Transactions() {
 
   const renderTransactionRow = (transaction: any) => {
     const isGroupExpense = transaction.type === 'GROUP';
-    const payerReceiver = isGroupExpense 
+    const payerReceiver = isGroupExpense
       ? `Paid by User ${transaction.payerId}`
       : `User ${transaction.fromUserId} → User ${transaction.toUserId}`;
 
     return (
       <tr key={transaction.id} className="border-b border-gray-200 hover:bg-gray-50">
         <td className="px-6 py-4 whitespace-nowrap">
-          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-            isGroupExpense 
-              ? 'bg-blue-100 text-blue-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
+          <span
+            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+              isGroupExpense ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+            }`}
+          >
             {transaction.type}
           </span>
         </td>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-          {payerReceiver}
-        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payerReceiver}</td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
           {transaction.category ? (
             <span className="capitalize">{transaction.category}</span>
@@ -209,8 +207,8 @@ export function Transactions() {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Transaction Management</h2>
             <p className="text-sm text-gray-600">
-              Record group expenses that are automatically split 50/50 between users A and B. 
-              Each transaction creates balanced ledger entries and updates both users' budgets.
+              Record group expenses that are automatically split 50/50 between users A and B. Each
+              transaction creates balanced ledger entries and updates both users' budgets.
             </p>
           </div>
         </div>
@@ -219,9 +217,7 @@ export function Transactions() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-          <p className="text-gray-600 mt-2">
-            View and manage your shared expenses and settlements
-          </p>
+          <p className="text-gray-600 mt-2">View and manage your shared expenses and settlements</p>
         </div>
         <button
           onClick={loadTransactions}
@@ -254,7 +250,7 @@ export function Transactions() {
               <select
                 id="payer"
                 value={formData.payer}
-                onChange={(e) => handleInputChange('payer', e.target.value as UserId)}
+                onChange={e => handleInputChange('payer', e.target.value as UserId)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="A">User A</option>
@@ -272,7 +268,7 @@ export function Transactions() {
                 step="0.01"
                 min="0.01"
                 value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
+                onChange={e => handleInputChange('amount', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   formErrors.amount ? 'border-red-300' : 'border-gray-300'
                 }`}
@@ -290,7 +286,7 @@ export function Transactions() {
               <select
                 id="category"
                 value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value as Category)}
+                onChange={e => handleInputChange('category', e.target.value as Category)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="food">Food</option>
@@ -329,7 +325,9 @@ export function Transactions() {
             <label className="text-sm font-medium text-gray-700">Type:</label>
             <select
               value={filters.type}
-              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as TransactionType | 'ALL' }))}
+              onChange={e =>
+                setFilters(prev => ({ ...prev, type: e.target.value as TransactionType | 'ALL' }))
+              }
               className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">All</option>
@@ -342,7 +340,9 @@ export function Transactions() {
             <label className="text-sm font-medium text-gray-700">Category:</label>
             <select
               value={filters.category}
-              onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value as Category | 'ALL' }))}
+              onChange={e =>
+                setFilters(prev => ({ ...prev, category: e.target.value as Category | 'ALL' }))
+              }
               className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">All</option>
@@ -358,14 +358,14 @@ export function Transactions() {
             <label className="text-sm font-medium text-gray-700">Sort by:</label>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'date' | 'amount')}
+              onChange={e => setSortBy(e.target.value as 'date' | 'amount')}
               className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="date">Date</option>
               <option value="amount">Amount</option>
             </select>
             <button
-              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
               className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
@@ -389,10 +389,9 @@ export function Transactions() {
             <div className="text-gray-400 text-4xl mb-4">📋</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No transactions found</h3>
             <p className="text-gray-600">
-              {transactions.length === 0 
-                ? "No transactions have been recorded yet. Add a group expense to get started!"
-                : "No transactions match your current filters. Try adjusting the filters above."
-              }
+              {transactions.length === 0
+                ? 'No transactions have been recorded yet. Add a group expense to get started!'
+                : 'No transactions match your current filters. Try adjusting the filters above.'}
             </p>
           </div>
         ) : (

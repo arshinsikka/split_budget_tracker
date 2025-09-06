@@ -6,12 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  roundTo2,
-  validateAmount,
-  splitEqually,
-  formatCurrency,
-} from '../../src/lib/money';
+import { roundTo2, validateAmount, splitEqually, formatCurrency } from '../../src/lib/money';
 
 describe('Money Utilities', () => {
   describe('roundTo2', () => {
@@ -64,15 +59,9 @@ describe('Money Utilities', () => {
     });
 
     it('should reject amounts with more than 2 decimal places', () => {
-      expect(() => validateAmount(100.001)).toThrow(
-        'Amount must have at most 2 decimal places'
-      );
-      expect(() => validateAmount(100.999)).toThrow(
-        'Amount must have at most 2 decimal places'
-      );
-      expect(() => validateAmount(0.001)).toThrow(
-        'Amount must have at most 2 decimal places'
-      );
+      expect(() => validateAmount(100.001)).toThrow('Amount must have at most 2 decimal places');
+      expect(() => validateAmount(100.999)).toThrow('Amount must have at most 2 decimal places');
+      expect(() => validateAmount(0.001)).toThrow('Amount must have at most 2 decimal places');
     });
 
     it('should accept amounts with exactly 2 decimal places', () => {
@@ -115,9 +104,7 @@ describe('Money Utilities', () => {
     it('should validate input amount', () => {
       expect(() => splitEqually(0)).toThrow('Amount must be positive');
       expect(() => splitEqually(-100)).toThrow('Amount must be positive');
-      expect(() => splitEqually(100.001)).toThrow(
-        'Amount must have at most 2 decimal places'
-      );
+      expect(() => splitEqually(100.001)).toThrow('Amount must have at most 2 decimal places');
     });
 
     it('should ensure total equals original amount', () => {
@@ -128,6 +115,17 @@ describe('Money Utilities', () => {
         const total = result.perUserShare * 2 + result.remainder;
         expect(Math.abs(total - amount)).toBeLessThan(0.01); // Allow for floating point precision
       }
+    });
+
+    it('should enforce rounding rule: payer gets extra cent for odd amounts', () => {
+      // Test the specific rounding rule: $20.01 → A: $10.01, B: $10.00
+      const result = splitEqually(20.01);
+      expect(result.perUserShare).toBe(10.0); // Each user gets $10.00
+      expect(result.remainder).toBe(0.01); // Payer gets the extra cent
+
+      // Verify total is correct
+      const total = result.perUserShare * 2 + result.remainder;
+      expect(total).toBe(20.01);
     });
   });
 

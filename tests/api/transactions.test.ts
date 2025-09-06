@@ -1,6 +1,6 @@
 /**
  * API tests for /transactions endpoints
- * 
+ *
  * Tests group expense creation, transaction listing, and validation.
  */
 
@@ -26,9 +26,9 @@ describe('POST /transactions', () => {
 
     expect(response.body).toHaveProperty('transaction');
     expect(response.body).toHaveProperty('summary');
-    
+
     const { transaction, summary } = response.body;
-    
+
     expect(transaction).toEqual({
       id: expect.any(String),
       type: 'GROUP',
@@ -58,14 +58,14 @@ describe('POST /transactions', () => {
       .expect(201);
 
     const { transaction } = response.body;
-    
+
     expect(transaction.perUserShare).toBe(50.5);
     expect(transaction.remainder).toBe(0);
   });
 
   it('should support idempotency key', async () => {
     const idempotencyKey = 'test-key-123';
-    
+
     const response1 = await request(app)
       .post('/transactions')
       .set('Idempotency-Key', idempotencyKey)
@@ -88,7 +88,7 @@ describe('POST /transactions', () => {
 
     // Should return same response
     expect(response2.body).toEqual(response1.body);
-    
+
     // Should only have one transaction in store
     const transactions = eventStore.listTransactions();
     expect(transactions).toHaveLength(1);
@@ -96,7 +96,7 @@ describe('POST /transactions', () => {
 
   it('should reject duplicate idempotency key with different body', async () => {
     const idempotencyKey = 'test-key-123';
-    
+
     await request(app)
       .post('/transactions')
       .set('Idempotency-Key', idempotencyKey)
@@ -213,15 +213,15 @@ describe('GET /transactions', () => {
       .expect(201);
 
     const response = await request(app).get('/transactions').expect(200);
-    
+
     expect(response.body).toHaveLength(3);
-    
+
     // Should be in chronological order
     const transactions = response.body;
     expect(transactions[0].type).toBe('GROUP');
     expect(transactions[1].type).toBe('GROUP');
     expect(transactions[2].type).toBe('SETTLEMENT');
-    
+
     // Check timestamps are in order
     const timestamps = transactions.map((t: any) => new Date(t.createdAt).getTime());
     expect(timestamps).toEqual([...timestamps].sort((a, b) => a - b));
@@ -238,7 +238,7 @@ describe('GET /transactions', () => {
       .expect(201);
 
     const response = await request(app).get('/transactions').expect(200);
-    
+
     expect(response.body[0]).toEqual({
       id: expect.any(String),
       type: 'GROUP',

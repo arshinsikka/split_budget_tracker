@@ -3,9 +3,14 @@
 # E2E test script for Split Budget Tracker
 # Demonstrates a realistic scenario using curl and jq
 
-set -e  # Exit on any error
+set -euo pipefail  # Exit on any error, undefined vars, pipe failures
 
 echo "🚀 Starting Split Budget Tracker E2E test..."
+
+# Check for required dependencies
+command -v jq >/dev/null 2>&1 || { echo "❌ jq is required (brew install jq)"; exit 1; }
+command -v curl >/dev/null 2>&1 || { echo "❌ curl is required"; exit 1; }
+command -v npm >/dev/null 2>&1 || { echo "❌ npm is required"; exit 1; }
 
 # Function to cleanup server process
 cleanup() {
@@ -19,14 +24,8 @@ cleanup() {
 # Set up cleanup on script exit
 trap cleanup EXIT
 
-# Find a free port
-PORT=$(python3 -c "
-import socket
-s = socket.socket()
-s.bind(('', 0))
-print(s.getsockname()[1])
-s.close()
-")
+# Use consistent port 3000
+PORT=${PORT:-3000}
 
 echo "📍 Using port: $PORT"
 
@@ -56,12 +55,7 @@ echo "📊 Step 1: Seed initial state and get user summaries"
 echo "===================================================="
 
 # Seed initial state
-SEED_RESPONSE=$(curl -s -X POST "$BASE_URL/seed/init" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "walletA": 500,
-        "walletB": 500
-    }' | jq '.')
+SEED_RESPONSE=$(curl -s -X POST "$BASE_URL/seed/init?demo=false" | jq '.')
 
 echo "Seed response:"
 echo "$SEED_RESPONSE" | jq '.'
@@ -77,8 +71,8 @@ echo ""
 echo "🔍 Verifying initial state..."
 
 # Check that both users have 500 wallet balance
-WALLET_A=$(echo "$INITIAL_STATE" | jq -r '.users[0].walletBalance')
-WALLET_B=$(echo "$INITIAL_STATE" | jq -r '.users[1].walletBalance')
+WALLET_A=$(echo "$INITIAL_STATE" | jq -r '.users[0].walletBalance | tonumber')
+WALLET_B=$(echo "$INITIAL_STATE" | jq -r '.users[1].walletBalance | tonumber')
 
 if [ "$WALLET_A" != "500" ] || [ "$WALLET_B" != "500" ]; then
     echo "❌ Initial wallet balances are incorrect: A=$WALLET_A, B=$WALLET_B"
@@ -127,8 +121,8 @@ if [ "$TX_TYPE" != "GROUP" ] || [ "$TX_PAYER" != "A" ] || [ "$TX_AMOUNT" != "120
 fi
 
 # Check wallet balances after expense
-WALLET_A_AFTER=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.users[0].walletBalance')
-WALLET_B_AFTER=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.users[1].walletBalance')
+WALLET_A_AFTER=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.users[0].walletBalance | tonumber')
+WALLET_B_AFTER=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.users[1].walletBalance | tonumber')
 
 if [ "$WALLET_A_AFTER" != "380" ] || [ "$WALLET_B_AFTER" != "500" ]; then
     echo "❌ Wallet balances after expense incorrect: A=$WALLET_A_AFTER, B=$WALLET_B_AFTER"
@@ -137,7 +131,7 @@ fi
 
 # Check net due after expense
 NET_DUE_AFTER=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.netDue.owes')
-NET_DUE_AMOUNT=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.netDue.amount')
+NET_DUE_AMOUNT=$(echo "$EXPENSE_RESPONSE" | jq -r '.summary.netDue.amount | tonumber')
 
 if [ "$NET_DUE_AFTER" != "B" ] || [ "$NET_DUE_AMOUNT" != "60" ]; then
     echo "❌ Net due after expense incorrect: owes=$NET_DUE_AFTER, amount=$NET_DUE_AMOUNT"
@@ -211,8 +205,8 @@ if [ "$SETTLEMENT_TYPE" != "SETTLEMENT" ] || [ "$SETTLEMENT_FROM" != "B" ] || [ 
 fi
 
 # Check wallet balances after settlement
-WALLET_A_FINAL=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.users[0].walletBalance')
-WALLET_B_FINAL=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.users[1].walletBalance')
+WALLET_A_FINAL=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.users[0].walletBalance | tonumber')
+WALLET_B_FINAL=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.users[1].walletBalance | tonumber')
 
 if [ "$WALLET_A_FINAL" != "440" ] || [ "$WALLET_B_FINAL" != "440" ]; then
     echo "❌ Wallet balances after settlement incorrect: A=$WALLET_A_FINAL, B=$WALLET_B_FINAL"
@@ -221,7 +215,7 @@ fi
 
 # Check net due after settlement
 NET_DUE_FINAL=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.netDue.owes')
-NET_DUE_FINAL_AMOUNT=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.netDue.amount')
+NET_DUE_FINAL_AMOUNT=$(echo "$SETTLEMENT_RESPONSE" | jq -r '.summary.netDue.amount | tonumber')
 
 if [ "$NET_DUE_FINAL" != "null" ] || [ "$NET_DUE_FINAL_AMOUNT" != "0" ]; then
     echo "❌ Net due after settlement incorrect: owes=$NET_DUE_FINAL, amount=$NET_DUE_FINAL_AMOUNT"
@@ -245,8 +239,8 @@ echo ""
 echo "🔍 Verifying final state..."
 
 # Check that both users have 440 wallet balance
-FINAL_WALLET_A=$(echo "$FINAL_STATE" | jq -r '.users[0].walletBalance')
-FINAL_WALLET_B=$(echo "$FINAL_STATE" | jq -r '.users[1].walletBalance')
+FINAL_WALLET_A=$(echo "$FINAL_STATE" | jq -r '.users[0].walletBalance | tonumber')
+FINAL_WALLET_B=$(echo "$FINAL_STATE" | jq -r '.users[1].walletBalance | tonumber')
 
 if [ "$FINAL_WALLET_A" != "440" ] || [ "$FINAL_WALLET_B" != "440" ]; then
     echo "❌ Final wallet balances incorrect: A=$FINAL_WALLET_A, B=$FINAL_WALLET_B"
@@ -261,8 +255,8 @@ if [ "$FINAL_NET_DUE" != "null" ]; then
 fi
 
 # Check budget categories
-BUDGET_A_FOOD=$(echo "$FINAL_STATE" | jq -r '.users[0].budgetByCategory.food // 0')
-BUDGET_B_FOOD=$(echo "$FINAL_STATE" | jq -r '.users[1].budgetByCategory.food // 0')
+BUDGET_A_FOOD=$(echo "$FINAL_STATE" | jq -r '.users[0].budgetByCategory.food // 0 | tonumber')
+BUDGET_B_FOOD=$(echo "$FINAL_STATE" | jq -r '.users[1].budgetByCategory.food // 0 | tonumber')
 
 if [ "$BUDGET_A_FOOD" != "60" ] || [ "$BUDGET_B_FOOD" != "60" ]; then
     echo "❌ Budget categories incorrect: A food=$BUDGET_A_FOOD, B food=$BUDGET_B_FOOD"
@@ -289,12 +283,12 @@ echo "User B summary:"
 echo "$SUMMARY_B" | jq '.'
 
 # Verify summary responses
-SUMMARY_A_WALLET=$(echo "$SUMMARY_A" | jq -r '.walletBalance')
-SUMMARY_A_FOOD=$(echo "$SUMMARY_A" | jq -r '.budgetByCategory.food')
+SUMMARY_A_WALLET=$(echo "$SUMMARY_A" | jq -r '.walletBalance | tonumber')
+SUMMARY_A_FOOD=$(echo "$SUMMARY_A" | jq -r '.budgetByCategory.food | tonumber')
 SUMMARY_A_NET_POSITION=$(echo "$SUMMARY_A" | jq -r '.netPosition.owes')
 
-SUMMARY_B_WALLET=$(echo "$SUMMARY_B" | jq -r '.walletBalance')
-SUMMARY_B_FOOD=$(echo "$SUMMARY_B" | jq -r '.budgetByCategory.food')
+SUMMARY_B_WALLET=$(echo "$SUMMARY_B" | jq -r '.walletBalance | tonumber')
+SUMMARY_B_FOOD=$(echo "$SUMMARY_B" | jq -r '.budgetByCategory.food | tonumber')
 SUMMARY_B_NET_POSITION=$(echo "$SUMMARY_B" | jq -r '.netPosition.owes')
 
 if [ "$SUMMARY_A_WALLET" != "440" ] || [ "$SUMMARY_A_FOOD" != "60" ] || [ "$SUMMARY_A_NET_POSITION" != "null" ]; then
@@ -321,7 +315,7 @@ echo "$WHO_OWES" | jq '.'
 # Verify who-owes-who response
 WHO_OWES_OWES=$(echo "$WHO_OWES" | jq -r '.owes')
 WHO_OWES_TO=$(echo "$WHO_OWES" | jq -r '.to')
-WHO_OWES_AMOUNT=$(echo "$WHO_OWES" | jq -r '.amount')
+WHO_OWES_AMOUNT=$(echo "$WHO_OWES" | jq -r '.amount | tonumber')
 
 if [ "$WHO_OWES_OWES" != "null" ] || [ "$WHO_OWES_TO" != "null" ] || [ "$WHO_OWES_AMOUNT" != "0" ]; then
     echo "❌ Who owes who incorrect: owes=$WHO_OWES_OWES, to=$WHO_OWES_TO, amount=$WHO_OWES_AMOUNT"

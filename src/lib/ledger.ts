@@ -7,7 +7,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { validateAmount, splitEqually } from './money';
+import { validateAmount } from './money';
 
 // Exact cents helpers to avoid FP drift
 const toCents = (n: number) => Math.round(n * 100);
@@ -15,12 +15,7 @@ const fromCents = (c: number) => Number((c / 100).toFixed(2));
 
 export type UserId = 'A' | 'B';
 export type TransactionType = 'GROUP' | 'SETTLEMENT' | 'INITIAL';
-export type Category =
-  | 'food'
-  | 'groceries'
-  | 'transport'
-  | 'entertainment'
-  | 'other';
+export type Category = 'food' | 'groceries' | 'transport' | 'entertainment' | 'other';
 
 /**
  * Ledger entry representing a single account movement
@@ -62,8 +57,7 @@ export interface SettlementInput {
  */
 export const ACCOUNTS = {
   CASH: (userId: UserId) => `CASH:${userId}`,
-  EXPENSE: (userId: UserId, category: Category) =>
-    `EXPENSE:${userId}:${category}`,
+  EXPENSE: (userId: UserId, category: Category) => `EXPENSE:${userId}:${category}`,
   DUE_FROM: (from: UserId, to: UserId) => `DUE_FROM:${from}->${to}`,
   DUE_TO: (from: UserId, to: UserId) => `DUE_TO:${from}->${to}`,
 } as const;
@@ -172,10 +166,7 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
   });
 
   // 4) Validate strictly in integer cents
-  const totalDeltaCents = entries.reduce(
-    (sum, e) => sum + Math.round(e.delta * 100),
-    0
-  );
+  const totalDeltaCents = entries.reduce((sum, e) => sum + Math.round(e.delta * 100), 0);
   if (totalDeltaCents !== 0) {
     throw new Error(
       `Transaction not balanced: total delta = ${Number((totalDeltaCents / 100).toFixed(2))}`
@@ -269,10 +260,7 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
   });
 
   // Verify transaction is balanced
-  const totalDeltaCents = entries.reduce(
-    (sum, e) => sum + toCents(e.delta),
-    0
-  );
+  const totalDeltaCents = entries.reduce((sum, e) => sum + toCents(e.delta), 0);
   if (totalDeltaCents !== 0) {
     throw new Error(`Transaction not balanced: total delta = ${fromCents(totalDeltaCents)}`);
   }
@@ -292,19 +280,14 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
  */
 export function validateLedgerEntries(entries: LedgerEntry[]): boolean {
   // Check balance
-  const totalDeltaCents = entries.reduce(
-    (sum, e) => sum + toCents(e.delta),
-    0
-  );
+  const totalDeltaCents = entries.reduce((sum, e) => sum + toCents(e.delta), 0);
   if (totalDeltaCents !== 0) {
     throw new Error(`Transaction not balanced: total delta = ${fromCents(totalDeltaCents)}`);
   }
 
   // Check that DUE_FROM and DUE_TO entries are properly paired
-  const dueFromEntries = entries.filter((e) =>
-    e.account.startsWith('DUE_FROM')
-  );
-  const dueToEntries = entries.filter((e) => e.account.startsWith('DUE_TO'));
+  const dueFromEntries = entries.filter(e => e.account.startsWith('DUE_FROM'));
+  const dueToEntries = entries.filter(e => e.account.startsWith('DUE_TO'));
 
   for (const fromEntry of dueFromEntries) {
     // Extract users from DUE_FROM:A->B
@@ -314,13 +297,9 @@ export function validateLedgerEntries(entries: LedgerEntry[]): boolean {
     const [, fromUser, toUser] = match;
     const correspondingToAccount = `DUE_TO:${toUser}->${fromUser}`;
 
-    const toEntry = dueToEntries.find(
-      (e) => e.account === correspondingToAccount
-    );
+    const toEntry = dueToEntries.find(e => e.account === correspondingToAccount);
     if (!toEntry) {
-      throw new Error(
-        `Missing corresponding DUE_TO entry for ${fromEntry.account}`
-      );
+      throw new Error(`Missing corresponding DUE_TO entry for ${fromEntry.account}`);
     }
 
     // Check that they sum to zero (mirrored)

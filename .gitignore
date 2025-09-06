@@ -88,3 +88,15 @@ jspm_packages/
 
 # DynamoDB Local files
 .dynamodb/
+
+# Test artifacts and temporary files
+*.test.js
+*.test.d.ts
+*.test.js.map
+*.test.d.ts.map
+test-*.js
+
+# Duplicate config files
+postcss.config.cjs
+.eslintrc.js-only.cjs
+package-lock 2.json

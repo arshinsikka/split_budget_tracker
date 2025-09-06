@@ -36,37 +36,29 @@ describe('Ledger Engine', () => {
 
       // Verify all entries have same transaction ID
       const txId = entries[0].txId;
-      expect(entries.every((entry) => entry.txId === txId)).toBe(true);
+      expect(entries.every(entry => entry.txId === txId)).toBe(true);
 
       // Verify all entries are GROUP type
-      expect(entries.every((entry) => entry.txType === 'GROUP')).toBe(true);
+      expect(entries.every(entry => entry.txType === 'GROUP')).toBe(true);
 
       // Verify specific entries
-      const cashEntry = entries.find((e) => e.account === ACCOUNTS.CASH('A'));
+      const cashEntry = entries.find(e => e.account === ACCOUNTS.CASH('A'));
       expect(cashEntry).toBeDefined();
       expect(cashEntry!.delta).toBe(-100.0);
 
-      const expenseA = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('A', 'food')
-      );
+      const expenseA = entries.find(e => e.account === ACCOUNTS.EXPENSE('A', 'food'));
       expect(expenseA).toBeDefined();
       expect(expenseA!.delta).toBe(50.0);
 
-      const expenseB = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('B', 'food')
-      );
+      const expenseB = entries.find(e => e.account === ACCOUNTS.EXPENSE('B', 'food'));
       expect(expenseB).toBeDefined();
       expect(expenseB!.delta).toBe(50.0);
 
-      const dueFrom = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_FROM('A', 'B')
-      );
+      const dueFrom = entries.find(e => e.account === ACCOUNTS.DUE_FROM('A', 'B'));
       expect(dueFrom).toBeDefined();
       expect(dueFrom!.delta).toBe(50.0);
 
-      const dueTo = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_TO('B', 'A')
-      );
+      const dueTo = entries.find(e => e.account === ACCOUNTS.DUE_TO('B', 'A'));
       expect(dueTo).toBeDefined();
       expect(dueTo!.delta).toBe(-50.0);
     });
@@ -81,23 +73,15 @@ describe('Ledger Engine', () => {
       const entries = postGroupExpense(input);
 
       // Verify split: 101.00 / 2 = 50.50 each
-      const expenseA = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('A', 'groceries')
-      );
-      const expenseB = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('B', 'groceries')
-      );
+      const expenseA = entries.find(e => e.account === ACCOUNTS.EXPENSE('A', 'groceries'));
+      const expenseB = entries.find(e => e.account === ACCOUNTS.EXPENSE('B', 'groceries'));
 
       expect(expenseA!.delta).toBe(50.5);
       expect(expenseB!.delta).toBe(50.5);
 
       // Verify DUE_FROM and DUE_TO are mirrored
-      const dueFrom = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_FROM('A', 'B')
-      );
-      const dueTo = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_TO('B', 'A')
-      );
+      const dueFrom = entries.find(e => e.account === ACCOUNTS.DUE_FROM('A', 'B'));
+      const dueTo = entries.find(e => e.account === ACCOUNTS.DUE_TO('B', 'A'));
 
       expect(dueFrom!.delta).toBe(50.5);
       expect(dueTo!.delta).toBe(-50.5);
@@ -118,23 +102,15 @@ describe('Ledger Engine', () => {
 
       // Split: 100.03 / 2 = 50.015 -> 50.01 each (floor division)
       // Remainder: 100.03 - (50.01 * 2) = 0.01
-      const expenseA = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('A', 'transport')
-      );
-      const expenseB = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('B', 'transport')
-      );
+      const expenseA = entries.find(e => e.account === ACCOUNTS.EXPENSE('A', 'transport'));
+      const expenseB = entries.find(e => e.account === ACCOUNTS.EXPENSE('B', 'transport'));
 
       expect(expenseA!.delta).toBe(50.01); // A gets their share
       expect(expenseB!.delta).toBe(50.02); // B gets their share + remainder
 
       // Payer (B) gets the remainder cent in their receivable
-      const dueFrom = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_FROM('B', 'A')
-      );
-      const dueTo = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_TO('A', 'B')
-      );
+      const dueFrom = entries.find(e => e.account === ACCOUNTS.DUE_FROM('B', 'A'));
+      const dueTo = entries.find(e => e.account === ACCOUNTS.DUE_TO('A', 'B'));
 
       expect(dueFrom!.delta).toBe(50.02); // B is owed 50.02 by A
       expect(dueTo!.delta).toBe(-50.02); // A owes 50.02 to B
@@ -166,20 +142,16 @@ describe('Ledger Engine', () => {
       const entries = postGroupExpense(input);
 
       // Verify B's cash is debited
-      const cashB = entries.find((e) => e.account === ACCOUNTS.CASH('B'));
+      const cashB = entries.find(e => e.account === ACCOUNTS.CASH('B'));
       expect(cashB!.delta).toBe(-120.0);
 
       // Verify B's receivable from A (B is the payer)
-      const dueFrom = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_FROM('B', 'A')
-      );
+      const dueFrom = entries.find(e => e.account === ACCOUNTS.DUE_FROM('B', 'A'));
       expect(dueFrom).toBeDefined();
       expect(dueFrom!.delta).toBe(60.0);
 
       // Verify A's payable to B
-      const dueTo = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_TO('A', 'B')
-      );
+      const dueTo = entries.find(e => e.account === ACCOUNTS.DUE_TO('A', 'B'));
       expect(dueTo).toBeDefined();
       expect(dueTo!.delta).toBe(-60.0);
 
@@ -208,28 +180,22 @@ describe('Ledger Engine', () => {
 
       // Verify all entries have same transaction ID
       const txId = entries[0].txId;
-      expect(entries.every((entry) => entry.txId === txId)).toBe(true);
+      expect(entries.every(entry => entry.txId === txId)).toBe(true);
 
       // Verify all entries are SETTLEMENT type
-      expect(entries.every((entry) => entry.txType === 'SETTLEMENT')).toBe(
-        true
-      );
+      expect(entries.every(entry => entry.txType === 'SETTLEMENT')).toBe(true);
 
       // Verify specific entries
-      const cashB = entries.find((e) => e.account === ACCOUNTS.CASH('B'));
+      const cashB = entries.find(e => e.account === ACCOUNTS.CASH('B'));
       expect(cashB!.delta).toBe(-30.0);
 
-      const cashA = entries.find((e) => e.account === ACCOUNTS.CASH('A'));
+      const cashA = entries.find(e => e.account === ACCOUNTS.CASH('A'));
       expect(cashA!.delta).toBe(30.0);
 
-      const dueFrom = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_FROM('A', 'B')
-      );
+      const dueFrom = entries.find(e => e.account === ACCOUNTS.DUE_FROM('A', 'B'));
       expect(dueFrom!.delta).toBe(-30.0);
 
-      const dueTo = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_TO('B', 'A')
-      );
+      const dueTo = entries.find(e => e.account === ACCOUNTS.DUE_TO('B', 'A'));
       expect(dueTo!.delta).toBe(30.0);
     });
 
@@ -240,9 +206,7 @@ describe('Ledger Engine', () => {
         amount: 30.0,
       };
 
-      expect(() => postSettlement(input)).toThrow(
-        'Cannot settle with yourself'
-      );
+      expect(() => postSettlement(input)).toThrow('Cannot settle with yourself');
     });
 
     it('should reject invalid amounts', () => {
@@ -267,23 +231,19 @@ describe('Ledger Engine', () => {
       const entries = postSettlement(input);
 
       // Verify A's cash is debited
-      const cashA = entries.find((e) => e.account === ACCOUNTS.CASH('A'));
+      const cashA = entries.find(e => e.account === ACCOUNTS.CASH('A'));
       expect(cashA!.delta).toBe(-25.5);
 
       // Verify B's cash is credited
-      const cashB = entries.find((e) => e.account === ACCOUNTS.CASH('B'));
+      const cashB = entries.find(e => e.account === ACCOUNTS.CASH('B'));
       expect(cashB!.delta).toBe(25.5);
 
       // Verify B's receivable from A decreases
-      const dueFrom = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_FROM('B', 'A')
-      );
+      const dueFrom = entries.find(e => e.account === ACCOUNTS.DUE_FROM('B', 'A'));
       expect(dueFrom!.delta).toBe(-25.5);
 
       // Verify A's payable to B decreases
-      const dueTo = entries.find(
-        (e) => e.account === ACCOUNTS.DUE_TO('A', 'B')
-      );
+      const dueTo = entries.find(e => e.account === ACCOUNTS.DUE_TO('A', 'B'));
       expect(dueTo!.delta).toBe(25.5);
 
       // Verify transaction is balanced
@@ -326,9 +286,7 @@ describe('Ledger Engine', () => {
         },
       ];
 
-      expect(() => validateLedgerEntries(entries)).toThrow(
-        'Transaction not balanced'
-      );
+      expect(() => validateLedgerEntries(entries)).toThrow('Transaction not balanced');
     });
 
     it('should validate balanced transactions', () => {
@@ -436,9 +394,7 @@ describe('Ledger Engine', () => {
         },
       ];
 
-      expect(() => validateLedgerEntries(entries)).toThrow(
-        'Transaction not balanced'
-      );
+      expect(() => validateLedgerEntries(entries)).toThrow('Transaction not balanced');
     });
   });
 
@@ -472,7 +428,7 @@ describe('Ledger Engine', () => {
 
       // Verify all entries have unique IDs
       const allEntries = [...expense1, ...expense2, ...settlement];
-      const ids = allEntries.map((e) => e.id);
+      const ids = allEntries.map(e => e.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
@@ -485,12 +441,8 @@ describe('Ledger Engine', () => {
       });
 
       // Verify the split: 101.00 / 2 = 50.50 each
-      const expenseA = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('A', 'food')
-      );
-      const expenseB = entries.find(
-        (e) => e.account === ACCOUNTS.EXPENSE('B', 'food')
-      );
+      const expenseA = entries.find(e => e.account === ACCOUNTS.EXPENSE('A', 'food'));
+      const expenseB = entries.find(e => e.account === ACCOUNTS.EXPENSE('B', 'food'));
 
       expect(expenseA!.delta).toBe(50.5);
       expect(expenseB!.delta).toBe(50.5);

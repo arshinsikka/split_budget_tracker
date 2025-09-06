@@ -13,11 +13,11 @@ export function Dashboard() {
     try {
       // Fetch data from the users endpoint which we know works
       const usersData = await api.getUsers();
-      
+
       // Extract user data
       const userA = usersData.users.find((u: any) => u.userId === 'A');
       const userB = usersData.users.find((u: any) => u.userId === 'B');
-      
+
       setUserASummary(userA);
       setUserBSummary(userB);
       setDebtStatus(usersData.netDue);
@@ -26,8 +26,8 @@ export function Dashboard() {
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       toast.error(
-        error instanceof Error 
-          ? `Failed to load dashboard: ${error.message}` 
+        error instanceof Error
+          ? `Failed to load dashboard: ${error.message}`
           : 'Failed to load dashboard data'
       );
     } finally {
@@ -36,21 +36,47 @@ export function Dashboard() {
   };
 
   const resetData = async () => {
-    if (!confirm('Are you sure you want to reset all data? This will clear all transactions and settlements.')) {
+    if (
+      !confirm(
+        'Are you sure you want to reset all data? This will clear all transactions and settlements.'
+      )
+    ) {
       return;
     }
-    
+
     setLoading(true);
     try {
-      await api.resetData();
+      await api.resetData(false); // Reset to clean state, not demo
       await fetchDashboardData();
       toast.success('Data reset successfully!');
     } catch (error) {
       console.error('Failed to reset data:', error);
       toast.error(
-        error instanceof Error 
-          ? `Failed to reset data: ${error.message}` 
-          : 'Failed to reset data'
+        error instanceof Error ? `Failed to reset data: ${error.message}` : 'Failed to reset data'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDemoData = async () => {
+    if (
+      !confirm('Load demo data? This will add sample transactions to show how the system works.')
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.resetData(true); // Load demo data
+      await fetchDashboardData();
+      toast.success('Demo data loaded successfully!');
+    } catch (error) {
+      console.error('Failed to load demo data:', error);
+      toast.error(
+        error instanceof Error
+          ? `Failed to load demo data: ${error.message}`
+          : 'Failed to load demo data'
       );
     } finally {
       setLoading(false);
@@ -65,7 +91,7 @@ export function Dashboard() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-SG', {
       style: 'currency',
-      currency: 'SGD'
+      currency: 'SGD',
     }).format(amount);
   };
 
@@ -108,39 +134,56 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">
-            Overview of your shared expenses and current balances
-          </p>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-2">
+              Overview of your shared expenses and current balances
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              onClick={loadDemoData}
+              disabled={loading}
+              className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+            >
+              <span className="mr-1 sm:mr-2">🎭</span>
+              <span className="hidden sm:inline">Demo</span>
+            </button>
+            <button
+              onClick={resetData}
+              disabled={loading}
+              className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+            >
+              <span className="mr-1 sm:mr-2">🗑️</span>
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+            <button
+              onClick={fetchDashboardData}
+              disabled={loading}
+              className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1 sm:mr-2"></div>
+                  <span className="hidden sm:inline">Loading...</span>
+                </>
+              ) : (
+                <>
+                  <span className="mr-1 sm:mr-2">🔄</span>
+                  <span className="hidden sm:inline">Refresh</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={resetData}
-            disabled={loading}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-          >
-            <span className="mr-2">🗑️</span>
-            Reset
-          </button>
-          <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Loading...
-              </>
-            ) : (
-              <>
-                <span className="mr-2">🔄</span>
-                Refresh
-              </>
-            )}
-          </button>
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Spend</strong> = your own share of each bill, regardless of who paid.
+            <strong> Wallet</strong> = cash you actually paid/received.
+            <strong> Settle</strong> = net debt between users.
+          </p>
         </div>
       </div>
 
@@ -153,14 +196,17 @@ export function Dashboard() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">User A</h2>
-            <div className="text-2xl font-bold text-blue-600">
-              {userASummary ? formatCurrency(userASummary.walletBalance) : '...'}
+            <div className="text-right">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Wallet (cash)</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {userASummary ? formatCurrency(userASummary.walletBalance) : '...'}
+              </div>
             </div>
           </div>
-          
+
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-700 uppercase tracking-wide">
-              Budget by Category
+              Spend by Category (this month)
             </h3>
             {userASummary ? (
               <div className="space-y-1">
@@ -180,14 +226,17 @@ export function Dashboard() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">User B</h2>
-            <div className="text-2xl font-bold text-green-600">
-              {userBSummary ? formatCurrency(userBSummary.walletBalance) : '...'}
+            <div className="text-right">
+              <div className="text-xs text-gray-500 uppercase tracking-wide">Wallet (cash)</div>
+              <div className="text-2xl font-bold text-green-600">
+                {userBSummary ? formatCurrency(userBSummary.walletBalance) : '...'}
+              </div>
             </div>
           </div>
-          
+
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-700 uppercase tracking-wide">
-              Budget by Category
+              Spend by Category (this month)
             </h3>
             {userBSummary ? (
               <div className="space-y-1">

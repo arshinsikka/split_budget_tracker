@@ -10,12 +10,12 @@ export function Settle() {
   const [debtStatus, setDebtStatus] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     fromUserId: 'A' as UserId,
     toUserId: 'B' as UserId,
-    amount: ''
+    amount: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -43,7 +43,7 @@ export function Settle() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: '' }));
@@ -52,35 +52,34 @@ export function Settle() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Validate form data
       const validatedData = SettlementSchema.parse({
         fromUserId: formData.fromUserId,
         toUserId: formData.toUserId,
-        amount: formData.amount
+        amount: formData.amount,
       });
 
       setSubmitting(true);
-      
+
       // Submit settlement
       await api.settle(validatedData);
-      
+
       toast.success('Settlement recorded successfully!');
-      
+
       // Reset form
       setFormData({
         fromUserId: 'A',
         toUserId: 'B',
-        amount: ''
+        amount: '',
       });
-      
+
       // Reload debt status
       await loadDebtStatus();
-      
     } catch (error) {
       console.error('Settlement failed:', error);
-      
+
       if (error instanceof z.ZodError) {
         const errors: Record<string, string> = {};
         error.issues.forEach((err: z.ZodIssue) => {
@@ -103,7 +102,7 @@ export function Settle() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-SG', {
       style: 'currency',
-      currency: 'SGD'
+      currency: 'SGD',
     }).format(amount);
   };
 
@@ -147,8 +146,8 @@ export function Settle() {
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Settlement Management</h2>
             <p className="text-sm text-gray-600">
-              Record payments between users to settle outstanding debts. Settlements reduce inter-user balances 
-              and maintain the double-entry accounting system.
+              Record payments between users to settle outstanding debts. Settlements reduce
+              inter-user balances and maintain the double-entry accounting system.
             </p>
           </div>
         </div>
@@ -183,6 +182,20 @@ export function Settle() {
       {/* Current Debt Status */}
       {renderDebtStatus()}
 
+      {/* Calculation Breakdown */}
+      {debtStatus && debtStatus.owes && debtStatus.to && debtStatus.amount > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Calculation Breakdown</h3>
+          <p className="text-sm text-gray-600">
+            {debtStatus.owes} owes {debtStatus.to} = sum of {debtStatus.owes}'s shares paid by{' '}
+            {debtStatus.to} – settlements received.
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            Current amount: {formatCurrency(debtStatus.amount)}
+          </p>
+        </div>
+      )}
+
       {/* Settlement Form */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Record Settlement</h2>
@@ -195,7 +208,7 @@ export function Settle() {
               <select
                 id="fromUserId"
                 value={formData.fromUserId}
-                onChange={(e) => handleInputChange('fromUserId', e.target.value)}
+                onChange={e => handleInputChange('fromUserId', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   formErrors.fromUserId ? 'border-red-300' : 'border-gray-300'
                 }`}
@@ -215,7 +228,7 @@ export function Settle() {
               <select
                 id="toUserId"
                 value={formData.toUserId}
-                onChange={(e) => handleInputChange('toUserId', e.target.value)}
+                onChange={e => handleInputChange('toUserId', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   formErrors.toUserId ? 'border-red-300' : 'border-gray-300'
                 }`}
@@ -236,7 +249,7 @@ export function Settle() {
                 type="text"
                 id="amount"
                 value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
+                onChange={e => handleInputChange('amount', e.target.value)}
                 placeholder="0.00"
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   formErrors.amount ? 'border-red-300' : 'border-gray-300'

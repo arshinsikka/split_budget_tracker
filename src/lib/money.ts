@@ -56,18 +56,14 @@ export function validateAmount(value: number): void {
       throw new Error('Amount must have at most 2 decimal places');
     }
   }
-  
-  // Additional check for very small amounts that might cause floating-point issues
-  if (value < 0.01) {
-    throw new Error('Amount too small (minimum 0.01)');
-  }
 }
 
 /**
  * Split amount equally between two users
  *
- * Uses banker's rounding and assigns any remainder cent to the payer.
- * This ensures the total always equals the original amount.
+ * ROUNDING RULE: For odd-cent totals, the payer receives the extra cent.
+ * This ensures the total always equals the original amount and provides
+ * a deterministic way to handle remainders.
  *
  * @param totalAmount - Total amount to split
  * @returns Object with perUserShare and remainder
@@ -75,7 +71,8 @@ export function validateAmount(value: number): void {
  * @example
  * splitEqually(100.00) // { perUserShare: 50.00, remainder: 0 }
  * splitEqually(101.00) // { perUserShare: 50.50, remainder: 0 }
- * splitEqually(100.01) // { perUserShare: 50.01, remainder: 0 }
+ * splitEqually(100.01) // { perUserShare: 50.00, remainder: 0.01 }
+ * splitEqually(20.01)  // { perUserShare: 10.00, remainder: 0.01 }
  */
 export function splitEqually(totalAmount: number): {
   perUserShare: number;
@@ -87,7 +84,7 @@ export function splitEqually(totalAmount: number): {
   const totalCents = Math.round(totalAmount * 100);
   const halfCents = Math.floor(totalCents / 2);
   const remainderCents = totalCents - halfCents * 2;
-  
+
   // Ensure we return exact cent values
   const perUserShare = halfCents / 100;
   const remainder = remainderCents / 100;
@@ -95,7 +92,9 @@ export function splitEqually(totalAmount: number): {
   // Verify the math is correct
   const reconstructed = perUserShare * 2 + remainder;
   if (Math.abs(reconstructed - totalAmount) > 0.001) {
-    throw new Error(`Split calculation error: ${perUserShare} * 2 + ${remainder} = ${reconstructed}, expected ${totalAmount}`);
+    throw new Error(
+      `Split calculation error: ${perUserShare} * 2 + ${remainder} = ${reconstructed}, expected ${totalAmount}`
+    );
   }
 
   return { perUserShare, remainder };

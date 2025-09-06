@@ -23,8 +23,8 @@ function AppContent() {
       } catch (error) {
         console.error('❌ API test failed:', error);
         toast.error(
-          error instanceof Error 
-            ? `API Error: ${error.message}` 
+          error instanceof Error
+            ? `API Error: ${error.message}`
             : 'Failed to connect to backend API'
         );
       }
@@ -37,17 +37,20 @@ function AppContent() {
     <Router>
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-        
+
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>
-            <Route path="/" element={
-              <div className="space-y-6">
-                <Overview />
-                <HealthCheck />
-                <ErrorTest />
-                <Dashboard />
-              </div>
-            } />
+            <Route
+              path="/"
+              element={
+                <div className="space-y-6">
+                  <Overview />
+                  <HealthCheck />
+                  <ErrorTest />
+                  <Dashboard />
+                </div>
+              }
+            />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/settle" element={<Settle />} />
           </Routes>

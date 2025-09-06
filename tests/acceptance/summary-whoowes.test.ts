@@ -1,6 +1,6 @@
 /**
  * Black-box acceptance tests for Day 5 features
- * 
+ *
  * Tests the new /summary and /who-owes-who endpoints
  * using only HTTP requests (no internal module imports).
  */
@@ -212,7 +212,7 @@ describe('Summary and Who-Owes-Who Endpoints', () => {
     it('should return 422 for invalid userId', async () => {
       const response = await fetch(`${server.baseURL}/summary?userId=Z`);
       expect(response.status).toBe(422);
-      
+
       const error = await response.json();
       expect(error).toMatchObject({
         type: 'validation-error',
@@ -233,7 +233,7 @@ describe('Summary and Who-Owes-Who Endpoints', () => {
 
       const response = await fetch(`${server.baseURL}/who-owes-who`);
       expect(response.status).toBe(200);
-      
+
       const debtSummary = await response.json();
       expect(debtSummary).toEqual({
         owes: null,
@@ -263,11 +263,11 @@ describe('Summary and Who-Owes-Who Endpoints', () => {
 
       const response = await fetch(`${server.baseURL}/who-owes-who`);
       expect(response.status).toBe(200);
-      
+
       const debtSummary = await response.json();
       expect(debtSummary).toEqual({
         owes: 'B', // B owes A
-        to: 'A',   // A is owed
+        to: 'A', // A is owed
         amount: 60, // 120/2
       });
     });
@@ -304,7 +304,7 @@ describe('Summary and Who-Owes-Who Endpoints', () => {
 
       const response = await fetch(`${server.baseURL}/who-owes-who`);
       expect(response.status).toBe(200);
-      
+
       const debtSummary = await response.json();
       expect(debtSummary).toEqual({
         owes: null, // debt settled
@@ -321,36 +321,36 @@ describe('Summary and Who-Owes-Who Endpoints', () => {
         headers: { 'Content-Type': 'application/json' },
       });
       expect(response.status).toBe(200);
-      
+
       const demoState = await response.json();
-      
+
       // Verify users array structure
       expect(demoState).toHaveProperty('users');
       expect(Array.isArray(demoState.users)).toBe(true);
       expect(demoState.users).toHaveLength(2);
-      
+
       // Verify netDue structure
       expect(demoState).toHaveProperty('netDue');
       expect(demoState.netDue).toHaveProperty('owes');
       expect(demoState.netDue).toHaveProperty('amount');
-      
+
       // Verify demo transactions were created
       const transactionsResponse = await fetch(`${server.baseURL}/transactions`);
       expect(transactionsResponse.status).toBe(200);
       const transactions = await transactionsResponse.json();
-      
+
       // Should have 3 demo transactions
       expect(transactions).toHaveLength(3);
-      
+
       // Verify transaction types and amounts
       const foodTx = transactions.find((t: any) => t.category === 'food');
       const groceriesTx = transactions.find((t: any) => t.category === 'groceries');
       const transportTx = transactions.find((t: any) => t.category === 'transport');
-      
+
       expect(foodTx).toBeDefined();
       expect(groceriesTx).toBeDefined();
       expect(transportTx).toBeDefined();
-      
+
       expect(foodTx.amount).toBe(120);
       expect(groceriesTx.amount).toBe(80);
       expect(transportTx.amount).toBe(50);

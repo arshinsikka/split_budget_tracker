@@ -1,6 +1,6 @@
 /**
  * API tests for /users endpoint
- * 
+ *
  * Tests user summary retrieval and query parameter handling.
  */
 
@@ -16,7 +16,7 @@ describe('GET /users', () => {
 
   it('should return empty user summaries when no transactions exist', async () => {
     const response = await request(app).get('/users').expect(200);
-    
+
     expect(response.body).toEqual({
       users: [
         {
@@ -51,7 +51,7 @@ describe('GET /users', () => {
 
   it('should return specific user summary when userId query param provided', async () => {
     const response = await request(app).get('/users?userId=A').expect(200);
-    
+
     expect(response.body).toEqual({
       userId: 'A',
       walletBalance: 0,
@@ -81,19 +81,19 @@ describe('GET /users', () => {
       .expect(201);
 
     const response = await request(app).get('/users').expect(200);
-    
+
     expect(response.body.users).toHaveLength(2);
-    
+
     // User A should have negative wallet balance and positive food budget
     const userA = response.body.users.find((u: any) => u.userId === 'A');
     expect(userA.walletBalance).toBe(-100);
     expect(userA.budgetByCategory.food).toBe(50);
-    
+
     // User B should have zero wallet balance and positive food budget
     const userB = response.body.users.find((u: any) => u.userId === 'B');
     expect(userB.walletBalance).toBe(0);
     expect(userB.budgetByCategory.food).toBe(50);
-    
+
     // Net due should show B owes A
     expect(response.body.netDue).toEqual({
       owes: 'B',
@@ -131,19 +131,19 @@ describe('GET /users', () => {
       .expect(201);
 
     const response = await request(app).get('/users').expect(200);
-    
+
     // User A: paid 100, gave 10 settlement, owes 60 for groceries
     const userA = response.body.users.find((u: any) => u.userId === 'A');
     expect(userA.walletBalance).toBe(-110); // Actual wallet balance
     expect(userA.budgetByCategory.food).toBe(50);
     expect(userA.budgetByCategory.groceries).toBe(60);
-    
+
     // User B: paid 120, received 10 settlement, receives 50 for food + 60 for groceries
     const userB = response.body.users.find((u: any) => u.userId === 'B');
     expect(userB.walletBalance).toBe(-110); // Actual wallet balance
     expect(userB.budgetByCategory.food).toBe(50);
     expect(userB.budgetByCategory.groceries).toBe(60);
-    
+
     // Net due: They are settled up after the settlement
     expect(response.body.netDue).toEqual({
       owes: null,

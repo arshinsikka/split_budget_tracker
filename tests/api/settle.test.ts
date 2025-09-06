@@ -1,6 +1,6 @@
 /**
  * API tests for /settle endpoint
- * 
+ *
  * Tests settlement creation, over-settlement validation, and idempotency.
  */
 
@@ -36,9 +36,9 @@ describe('POST /settle', () => {
 
     expect(response.body).toHaveProperty('settlement');
     expect(response.body).toHaveProperty('summary');
-    
+
     const { settlement, summary } = response.body;
-    
+
     expect(settlement).toEqual({
       id: expect.any(String),
       type: 'SETTLEMENT',
@@ -132,7 +132,7 @@ describe('POST /settle', () => {
       .expect(201);
 
     const idempotencyKey = 'settle-key-123';
-    
+
     const response1 = await request(app)
       .post('/settle')
       .set('Idempotency-Key', idempotencyKey)
@@ -155,7 +155,7 @@ describe('POST /settle', () => {
 
     // Should return same response
     expect(response2.body).toEqual(response1.body);
-    
+
     // Should only have one settlement in store
     const transactions = eventStore.listTransactions();
     const settlements = transactions.filter(t => t.type === 'SETTLEMENT');
@@ -174,7 +174,7 @@ describe('POST /settle', () => {
       .expect(201);
 
     const idempotencyKey = 'settle-key-123';
-    
+
     await request(app)
       .post('/settle')
       .set('Idempotency-Key', idempotencyKey)

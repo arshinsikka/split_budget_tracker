@@ -23,11 +23,13 @@ The app features a clean, minimal layout with three main views:
 - **Settle** (`/settle`) - Record settlement payments
 
 ### Navigation
+
 - Top navigation bar with project title
 - Responsive design with focus styles for accessibility
 - Active route highlighting with color-coded indicators
 
 ### Error Handling
+
 - App-level error boundary with user-friendly fallback UI
 - Development mode shows detailed error information
 - Graceful error recovery with refresh option
@@ -44,6 +46,7 @@ bash scripts/demo-ui.sh
 ```
 
 This script will:
+
 - Start the backend API server on port 3000
 - Start the frontend development server on port 5173
 - Wait for both services to be ready
@@ -53,11 +56,13 @@ This script will:
 ### Option 2: Manual Setup
 
 1. **Start the backend** (from project root):
+
 ```bash
 npm run dev
 ```
 
 2. **Start the frontend** (in a new terminal):
+
 ```bash
 cd frontend
 npm install
@@ -69,16 +74,19 @@ The frontend will be available at http://localhost:5173
 ## Setup
 
 1. Navigate to the frontend directory:
+
 ```bash
 cd frontend
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -111,7 +119,7 @@ const users = await api.getUsers();
 const transaction = await api.createTransaction({
   payerId: 'A',
   amount: '100.00',
-  category: 'food'
+  category: 'food',
 });
 
 // Get user summary
@@ -127,18 +135,24 @@ For POST requests (transactions and settlements), you can include an idempotency
 
 ```typescript
 // Create transaction with idempotency key
-const transaction = await api.createTransaction({
-  payerId: 'A',
-  amount: '100.00',
-  category: 'food'
-}, 'unique-transaction-key');
+const transaction = await api.createTransaction(
+  {
+    payerId: 'A',
+    amount: '100.00',
+    category: 'food',
+  },
+  'unique-transaction-key'
+);
 
 // Settle debt with idempotency key
-const settlement = await api.settle({
-  fromUserId: 'B',
-  toUserId: 'A',
-  amount: '50.00'
-}, 'unique-settlement-key');
+const settlement = await api.settle(
+  {
+    fromUserId: 'B',
+    toUserId: 'A',
+    amount: '50.00',
+  },
+  'unique-settlement-key'
+);
 ```
 
 ### Error Handling
@@ -207,6 +221,7 @@ frontend/
 The Transactions page (`/transactions`) provides comprehensive transaction management:
 
 ### Features
+
 - **Transaction List**: Displays all transactions with key fields (type, payer/receiver, category, amount, date)
 - **Real-time Data**: Fetches live data from `GET /transactions` endpoint
 - **Filtering & Sorting**: Filter by transaction type and category, sort by date or amount
@@ -217,6 +232,7 @@ The Transactions page (`/transactions`) provides comprehensive transaction manag
 - **Error Handling**: Toast notifications for API errors with retry functionality
 
 ### Add Group Expense Form
+
 - **Fields**: Payer (User A/B), Amount (SGD), Category (food/groceries/transport/entertainment/other)
 - **Validation**: Client-side validation with inline error messages
 - **Double-submit Protection**: Form disabled during submission to prevent duplicates
@@ -224,6 +240,7 @@ The Transactions page (`/transactions`) provides comprehensive transaction manag
 - **Error Handling**: Server validation errors displayed as toast messages
 
 ### Transaction Display
+
 - **Type Badges**: Color-coded badges for GROUP (blue) and SETTLEMENT (green) transactions
 - **Payer/Receiver Info**: Clear indication of who paid or who owes whom
 - **Category Display**: Capitalized category names with fallback for missing categories
@@ -231,6 +248,7 @@ The Transactions page (`/transactions`) provides comprehensive transaction manag
 - **Responsive Table**: Horizontal scroll on mobile devices
 
 ### Filtering & Sorting
+
 - **Type Filter**: Show all, group expenses only, or settlements only
 - **Category Filter**: Filter by specific expense categories
 - **Sort Options**: Sort by date (newest/oldest) or amount (highest/lowest)
@@ -239,28 +257,36 @@ The Transactions page (`/transactions`) provides comprehensive transaction manag
 ## Screenshots
 
 ### Dashboard
+
 The Dashboard provides an overview of shared expenses and current balances:
+
 - **User Cards**: Display wallet balances and budget breakdowns by category
 - **Debt Status Banner**: Shows who owes whom or "All settled up" status
 - **Real-time Data**: Fetches live data from the backend API
 - **Refresh Button**: Manual refresh with loading state
 
 ### Transactions
+
 The Transactions page manages all shared expenses and settlements:
+
 - **Transaction Table**: Lists all transactions with type, payer/receiver, category, amount, and date
 - **Filtering & Sorting**: Filter by type and category, sort by date or amount
 - **Add Group Expense Form**: Create new group expenses with validation
 - **Currency Formatting**: All amounts displayed in SGD with 2 decimal places
 
 ### Settlement
+
 The Settlement page handles debt payments between users:
+
 - **Current Debt Status**: Shows outstanding debt and maximum settlement amount
 - **Settlement Form**: Record payments with validation for self-settlement and over-settlement
 - **Idempotency Protection**: Prevents duplicate submissions
 - **Success Feedback**: Toast notifications and automatic data refresh
 
 ### Error Handling
+
 Comprehensive error handling throughout the application:
+
 - **Error Boundary**: Catches JavaScript errors with user-friendly fallback UI
 - **Toast Notifications**: API errors displayed as toast messages
 - **Form Validation**: Real-time validation with inline error messages
@@ -271,6 +297,7 @@ Comprehensive error handling throughout the application:
 The frontend connects to the Split Budget Tracker backend API. Make sure the backend is running on the configured URL (default: http://localhost:3000).
 
 The application includes:
+
 - ✅ Health check component showing backend status
 - ✅ Toast notifications for API success/error feedback
 - ✅ Automatic API test on app load

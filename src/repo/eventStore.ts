@@ -1,20 +1,12 @@
 /**
  * In-memory event store for transactions and ledger entries
- * 
+ *
  * Stores all transactions and their corresponding ledger entries
  * in memory arrays. Provides helper functions for querying and
  * maintaining data consistency.
  */
 
-
-import {
-  LedgerEntry,
-  GroupExpenseInput,
-  SettlementInput,
-  UserId,
-
-  Category,
-} from '../lib/ledger';
+import { LedgerEntry, GroupExpenseInput, SettlementInput, UserId, Category } from '../lib/ledger';
 
 export interface GroupExpense {
   id: string;
@@ -50,7 +42,8 @@ class EventStore {
    * Add a group expense transaction
    */
   addGroupExpense(input: GroupExpenseInput, entries: LedgerEntry[]): GroupExpense {
-    const otherUserShare = entries.find(e => e.account.includes('EXPENSE') && e.userId !== input.payerId)?.delta || 0;
+    const otherUserShare =
+      entries.find(e => e.account.includes('EXPENSE') && e.userId !== input.payerId)?.delta || 0;
     const transaction: GroupExpense = {
       id: entries[0]!.txId,
       type: 'GROUP',
@@ -91,8 +84,8 @@ class EventStore {
    * List all transactions
    */
   listTransactions(): Transaction[] {
-    return [...this.transactions].sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    return [...this.transactions].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
   }
 

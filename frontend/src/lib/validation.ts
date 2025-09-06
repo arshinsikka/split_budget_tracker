@@ -4,7 +4,9 @@ import { z } from 'zod';
 export const UserIdSchema = z.enum(['A', 'B']);
 
 // Money validation - string with exactly 2 decimal places
-export const MoneySchema = z.string().regex(/^\d+\.\d{2}$/, 'Amount must be a string with exactly 2 decimal places');
+export const MoneySchema = z
+  .string()
+  .regex(/^\d+\.\d{2}$/, 'Amount must be a string with exactly 2 decimal places');
 
 // Category validation
 export const CategorySchema = z.enum(['food', 'groceries', 'transport', 'entertainment', 'other']);
@@ -17,13 +19,15 @@ export const CreateTransactionSchema = z.object({
 });
 
 // Settlement input validation
-export const SettlementSchema = z.object({
-  fromUserId: UserIdSchema,
-  toUserId: UserIdSchema,
-  amount: MoneySchema,
-}).refine((data) => data.fromUserId !== data.toUserId, {
-  message: 'Cannot settle with yourself',
-});
+export const SettlementSchema = z
+  .object({
+    fromUserId: UserIdSchema,
+    toUserId: UserIdSchema,
+    amount: MoneySchema,
+  })
+  .refine(data => data.fromUserId !== data.toUserId, {
+    message: 'Cannot settle with yourself',
+  });
 
 // Type exports
 export type CreateTransactionRequest = z.infer<typeof CreateTransactionSchema>;

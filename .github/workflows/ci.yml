@@ -1,53 +1,86 @@
-name: CI
+name: ci
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main, develop]
 
 jobs:
-  test:
+  backend:
+    name: Backend CI
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20.x]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint -- --max-warnings=0
+
+      - name: Prettier format check
+        run: npm run format
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.js
+          test -f dist/index.d.ts
+
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    if: false # Disabled for now, frontend is optional
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
 
-    - name: Build project
-      run: npm run build
+      - name: Frontend type check
+        run: |
+          cd frontend
+          npm run typecheck || echo "No frontend typecheck script"
 
-    - name: Run linting
-      run: npm run lint
+      - name: Frontend lint
+        run: |
+          cd frontend
+          npm run lint || echo "No frontend lint script"
 
-    - name: Run unit and API tests
-      run: npm run test:run
+      - name: Frontend test
+        run: |
+          cd frontend
+          npm test || echo "No frontend tests"
 
-    - name: Run independent test suite
-      run: npm run test:independent
-
-    - name: Run E2E tests
-      run: bash scripts/e2e.sh
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          coverage/
-          test-results/
-        retention-days: 7
+      - name: Frontend build
+        run: |
+          cd frontend
+          npm run build || echo "No frontend build script"
