@@ -101,8 +101,8 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
   // Determine the other user
   const otherUserId: UserId = payerId === 'A' ? 'B' : 'A';
 
-  // --- use integer cents end-to-end ---
-  const totalCents = toCents(amount);
+  // --- integer cents end-to-end ---
+  const totalCents = Math.round(amount * 100);
   const halfCents = Math.floor(totalCents / 2);
   const remainderCents = totalCents % 2;
 
@@ -111,19 +111,23 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
 
   const entries: LedgerEntry[] = [];
 
-  // 1) CASH (payer pays full)
+  // 1) CASH (payer pays full amount)
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.CASH(payerId),
     userId: payerId,
-    delta: fromCents(-totalCents),
+    delta: Number((-totalCents / 100).toFixed(2)),
     createdAt,
   });
 
-  // 2) EXPENSE (budgets): exactly half each; remainder does NOT go to budgets
-  const expenseEach = halfCents; // integer cents
+  // 2) EXPENSE (budgets):
+  //    - Payer carries the remainder cent (if any)
+  //    - Other user gets exactly half
+  const payerExpenseCents = halfCents + remainderCents;
+  const otherExpenseCents = halfCents;
+
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -131,9 +135,10 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(payerId, category),
     userId: payerId,
     category,
-    delta: fromCents(expenseEach),
+    delta: Number((payerExpenseCents / 100).toFixed(2)),
     createdAt,
   });
+
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -141,38 +146,40 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(otherUserId, category),
     userId: otherUserId,
     category,
-    delta: fromCents(expenseEach),
+    delta: Number((otherExpenseCents / 100).toFixed(2)),
     createdAt,
   });
 
-  // 3) Inter-user balances: other owes payer half + any remainder
-  const dueFromCents = halfCents + remainderCents;
+  // 3) Inter-user balances: exactly half (no remainder here)
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.DUE_FROM(payerId, otherUserId),
     userId: payerId,
-    delta: fromCents(dueFromCents),
+    delta: Number((halfCents / 100).toFixed(2)),
     createdAt,
   });
+
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.DUE_TO(otherUserId, payerId),
     userId: otherUserId,
-    delta: fromCents(-dueFromCents),
+    delta: Number((-halfCents / 100).toFixed(2)),
     createdAt,
   });
 
-  // 4) Validate strictly in cents (no FP)
+  // 4) Validate strictly in integer cents
   const totalDeltaCents = entries.reduce(
-    (sum, e) => sum + toCents(e.delta),
+    (sum, e) => sum + Math.round(e.delta * 100),
     0
   );
   if (totalDeltaCents !== 0) {
-    throw new Error(`Transaction not balanced: total delta = ${fromCents(totalDeltaCents)}`);
+    throw new Error(
+      `Transaction not balanced: total delta = ${Number((totalDeltaCents / 100).toFixed(2))}`
+    );
   }
 
   return entries;
