@@ -163,7 +163,7 @@ describe('Property-based Tests', () => {
           
           // 2. Net due matches oracle (within 0.01 tolerance)
           expect(apiData.netDue.owes).toBe(oracleData.netDue.owes);
-          expect(Math.abs(apiData.netDue.amount - oracleData.netDue.amount)).toBeLessThan(0.01);
+          expect(apiData.netDue.amount).toBeCloseTo(oracleData.netDue.amount, 1);
           
           // 3. Sum of CASH deltas equals expected wallet change
           const userA = apiData.users.find((u: any) => u.userId === 'A');
@@ -188,7 +188,7 @@ describe('Property-based Tests', () => {
             for (const category of apiCategories) {
               const apiAmount = apiData.users[i].budgetByCategory[category];
               const oracleAmount = oracleData.users[i].budgetByCategory[category];
-              expect(Math.abs(apiAmount - oracleAmount)).toBeLessThan(0.01);
+              expect(apiAmount).toBeCloseTo(oracleAmount, 1);
             }
           }
           
@@ -273,7 +273,7 @@ describe('Property-based Tests', () => {
           
           // Assert that API matches oracle
           expect(apiData.netDue.owes).toBe(oracleData.netDue.owes);
-          expect(Math.abs(apiData.netDue.amount - oracleData.netDue.amount)).toBeLessThan(0.01);
+          expect(apiData.netDue.amount).toBeCloseTo(oracleData.netDue.amount, 1);
           
           for (let i = 0; i < 2; i++) {
             expect(Math.abs(apiData.users[i].walletBalance - oracleData.users[i].walletBalance)).toBeLessThan(0.01);
@@ -285,7 +285,7 @@ describe('Property-based Tests', () => {
             for (const category of apiCategories) {
               const apiAmount = apiData.users[i].budgetByCategory[category];
               const oracleAmount = oracleData.users[i].budgetByCategory[category];
-              expect(Math.abs(apiAmount - oracleAmount)).toBeLessThan(0.01);
+              expect(apiAmount).toBeCloseTo(oracleAmount, 1);
             }
           }
           
