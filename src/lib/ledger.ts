@@ -7,7 +7,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { validateAmount } from './money';
+import { validateAmount, splitEqually } from './money';
 
 export type UserId = 'A' | 'B';
 export type TransactionType = 'GROUP' | 'SETTLEMENT' | 'INITIAL';
@@ -97,11 +97,9 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
   // Determine the other user
   const otherUserId: UserId = payerId === 'A' ? 'B' : 'A';
 
-  // Split amount equally using integer arithmetic
-  const totalCents = Math.round(amount * 100);
-  const halfCents = Math.floor(totalCents / 2);
-  const remainderCents = totalCents - halfCents * 2;
-
+  // Use the money module's splitEqually function for consistent banker's rounding
+  const split = splitEqually(amount);
+  
   // Create transaction ID
   const txId = uuidv4();
   const createdAt = new Date().toISOString();
@@ -119,10 +117,7 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     createdAt,
   });
 
-  // 2. Credit both users' expense accounts (they both owe their share)
-  // According to ADR: budgets are T/2 each (banker's rounding)
-  // Both users get the same rounded amount for budgets
-  const budgetAmount = halfCents / 100;
+  // 2. Credit both users' expense accounts (split evenly)
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
@@ -130,7 +125,7 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(payerId, category),
     userId: payerId,
     category,
-    delta: budgetAmount, // Positive: expense recorded
+    delta: split.perUserShare, // Positive: expense increases
     createdAt,
   });
 
@@ -141,42 +136,38 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
     account: ACCOUNTS.EXPENSE(otherUserId, category),
     userId: otherUserId,
     category,
-    delta: budgetAmount, // Positive: expense recorded
+    delta: split.perUserShare, // Positive: expense increases
     createdAt,
   });
 
-  // 3. Credit payer's receivable from other user
-  // The remainder affects receivable/payable, not budgets
-  const dueFromCents = halfCents + remainderCents;
+  // 3. Credit payer's receivable (other user owes their half + remainder)
+  const receivableAmount = split.perUserShare + split.remainder;
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.DUE_FROM(payerId, otherUserId),
     userId: payerId,
-    delta: dueFromCents / 100, // Positive: asset increases
+    delta: receivableAmount, // Positive: asset increases
     createdAt,
   });
 
-  // 4. Debit other user's payable to payer
+  // 4. Debit other user's payable
   entries.push({
     id: uuidv4(),
     txType: 'GROUP',
     txId,
     account: ACCOUNTS.DUE_TO(otherUserId, payerId),
     userId: otherUserId,
-    delta: -dueFromCents / 100, // Negative: liability increases
+    delta: -receivableAmount, // Negative: liability increases
     createdAt,
   });
 
-  // Verify transaction is balanced using integer arithmetic
-  const totalDeltaCents = entries.reduce(
-    (sum, entry) => sum + Math.round(entry.delta * 100),
-    0
-  );
-  if (totalDeltaCents !== 0) {
+  // Verify transaction is balanced
+  const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
+  if (Math.abs(totalDelta) > 0.01) {
     throw new Error(
-      `Transaction not balanced: total delta = ${totalDeltaCents / 100}`
+      `Transaction not balanced: total delta = ${totalDelta}`
     );
   }
 
@@ -266,14 +257,11 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
     createdAt,
   });
 
-  // Verify transaction is balanced using integer arithmetic
-  const totalDeltaCents = entries.reduce(
-    (sum, entry) => sum + Math.round(entry.delta * 100),
-    0
-  );
-  if (totalDeltaCents !== 0) {
+  // Verify transaction is balanced
+  const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
+  if (Math.abs(totalDelta) > 0.01) {
     throw new Error(
-      `Transaction not balanced: total delta = ${totalDeltaCents / 100}`
+      `Transaction not balanced: total delta = ${totalDelta}`
     );
   }
 
@@ -291,14 +279,11 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
  * @returns true if valid, throws error if invalid
  */
 export function validateLedgerEntries(entries: LedgerEntry[]): boolean {
-  // Check balance using integer arithmetic
-  const totalDeltaCents = entries.reduce(
-    (sum, entry) => sum + Math.round(entry.delta * 100),
-    0
-  );
-  if (totalDeltaCents !== 0) {
+  // Check balance
+  const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
+  if (Math.abs(totalDelta) > 0.01) {
     throw new Error(
-      `Transaction not balanced: total delta = ${totalDeltaCents / 100}`
+      `Transaction not balanced: total delta = ${totalDelta}`
     );
   }
 

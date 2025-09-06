@@ -206,9 +206,9 @@ describe('GET /transactions', () => {
     await request(app)
       .post('/settle')
       .send({
-        fromUserId: 'B',
-        toUserId: 'A',
-        amount: '30.00',
+        fromUserId: 'A',
+        toUserId: 'B',
+        amount: '10.00',
       })
       .expect(201);
 

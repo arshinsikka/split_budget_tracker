@@ -202,6 +202,20 @@ export function Transactions() {
 
   return (
     <div className="space-y-6">
+      {/* Overview Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center space-x-3">
+          <span className="text-2xl">📝</span>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Transaction Management</h2>
+            <p className="text-sm text-gray-600">
+              Record group expenses that are automatically split 50/50 between users A and B. 
+              Each transaction creates balanced ledger entries and updates both users' budgets.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>

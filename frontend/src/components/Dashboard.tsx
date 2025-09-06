@@ -11,16 +11,16 @@ export function Dashboard() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch data for both users and debt status
-      const [summaryA, summaryB, whoOwesWho] = await Promise.all([
-        api.getSummary('A'),
-        api.getSummary('B'),
-        api.getWhoOwesWho()
-      ]);
-
-      setUserASummary(summaryA);
-      setUserBSummary(summaryB);
-      setDebtStatus(whoOwesWho);
+      // Fetch data from the users endpoint which we know works
+      const usersData = await api.getUsers();
+      
+      // Extract user data
+      const userA = usersData.users.find((u: any) => u.userId === 'A');
+      const userB = usersData.users.find((u: any) => u.userId === 'B');
+      
+      setUserASummary(userA);
+      setUserBSummary(userB);
+      setDebtStatus(usersData.netDue);
 
       toast.success('Dashboard data refreshed successfully!');
     } catch (error) {

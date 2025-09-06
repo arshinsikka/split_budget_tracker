@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navigation } from './components/Navigation';
+import { Overview } from './components/Overview';
 import { HealthCheck } from './components/HealthCheck';
 import { Dashboard } from './components/Dashboard';
 import { Transactions } from './components/Transactions';
@@ -41,6 +42,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={
               <div className="space-y-6">
+                <Overview />
                 <HealthCheck />
                 <ErrorTest />
                 <Dashboard />

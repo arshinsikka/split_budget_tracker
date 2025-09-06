@@ -46,18 +46,31 @@ export class Oracle {
   
   // Banker's rounding to 2 decimal places
   private roundTo2(value: number): number {
-    return Math.round(value * 100) / 100;
+    // Banker's rounding: ties go to even numbers
+    // For amounts like 0.005, round to nearest even cent
+    const cents = value * 100;
+    const floor = Math.floor(cents);
+    const remainder = cents - floor;
+    
+    if (remainder === 0.5) {
+      // Tie case: round to even
+      return (floor + (floor % 2)) / 100;
+    } else {
+      // Normal case: round to nearest
+      return Math.round(cents) / 100;
+    }
   }
   
   // Handle odd cent remainder by assigning to payer's receivable
   // According to ADR: budgets are T/2 each (banker's rounding)
   // Remainder only affects receivable/payable, not budgets
-  private splitAmount(amount: number): { shareA: number; shareB: number } {
+  private splitAmount(amount: number): { shareA: number; shareB: number; remainder: number } {
     const half = amount / 2;
     const roundedHalf = this.roundTo2(half);
+    const remainder = amount - (roundedHalf * 2);
     
     // Both users get the same rounded amount for budgets
-    return { shareA: roundedHalf, shareB: roundedHalf };
+    return { shareA: roundedHalf, shareB: roundedHalf, remainder };
   }
   
   // Record a group expense
@@ -66,7 +79,7 @@ export class Oracle {
       throw new Error('Amount must be positive');
     }
     
-    const { shareA, shareB } = this.splitAmount(amount);
+    const { shareA, shareB, remainder } = this.splitAmount(amount);
     
     // Update wallets
     if (payer === 'A') {
@@ -82,13 +95,15 @@ export class Oracle {
     // Update net due using DUE_FROM logic (matching API exactly)
     // netDue represents: (A's receivable from B) - (B's receivable from A)
     if (payer === 'A') {
-      // A paid, so B owes A their share
+      // A paid, so B owes A their share + remainder
       // This increases A's receivable from B (positive netDue)
-      this.state.netDue = this.roundTo2(this.state.netDue + shareB);
+      const receivableAmount = shareB + remainder;
+      this.state.netDue = this.roundTo2(this.state.netDue + receivableAmount);
     } else {
-      // B paid, so A owes B their share  
+      // B paid, so A owes B their share + remainder
       // This increases B's receivable from A (negative netDue)
-      this.state.netDue = this.roundTo2(this.state.netDue - shareA);
+      const receivableAmount = shareA + remainder;
+      this.state.netDue = this.roundTo2(this.state.netDue - receivableAmount);
     }
   }
   
