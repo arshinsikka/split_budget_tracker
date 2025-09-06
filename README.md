@@ -324,7 +324,6 @@ The CI runs on every push and pull request:
 4. **Test** – All unit, integration, and acceptance tests
 5. **Build** – Compile and verify build output
 
-
 ### Local Development
 
 Run the full CI pipeline locally:
