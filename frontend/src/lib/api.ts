@@ -149,4 +149,11 @@ export const api = {
   async getWhoOwesWho() {
     return apiRequest<{ owes: string | null; to: string | null; amount: number }>('/who-owes-who');
   },
+
+  // Reset all data
+  async resetData(demo: boolean = true) {
+    return apiRequest<any>(`/seed/init?demo=${demo}`, {
+      method: 'POST',
+    });
+  },
 };
