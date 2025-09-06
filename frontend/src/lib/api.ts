@@ -1,99 +1,19 @@
+import { CreateTransactionSchema, SettlementSchema, type CreateTransactionRequest, type SettlementRequest } from './validation';
+
+// Environment configuration
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const DEBUG_HTTP = import.meta.env.VITE_DEBUG_HTTP === 'true';
 
 // RFC 7807 Problem Details interface
 export interface ProblemDetails {
-  type: string;
-  title: string;
-  detail: string;
-  status: number;
+  type?: string;
+  title?: string;
+  detail?: string;
+  status?: number;
+  instance?: string;
 }
 
-// API Response interfaces
-export interface HealthResponse {
-  status: string;
-  timestamp: string;
-  service: string;
-  version: string;
-}
-
-export interface User {
-  userId: string;
-  walletBalance: number;
-  budgetByCategory: {
-    food: number;
-    groceries: number;
-    transport: number;
-    entertainment: number;
-    other: number;
-  };
-}
-
-export interface UsersResponse {
-  users: User[];
-  netDue: {
-    owes: string | null;
-    amount: number;
-  };
-}
-
-export interface Transaction {
-  id: string;
-  type: 'GROUP' | 'SETTLEMENT' | 'INITIAL';
-  payerId?: string;
-  amount: number;
-  category?: string;
-  perUserShare?: number;
-  remainder?: number;
-  fromUserId?: string;
-  toUserId?: string;
-  createdAt: string;
-}
-
-export interface CreateTransactionRequest {
-  payerId: string;
-  amount: string;
-  category: string;
-}
-
-export interface CreateTransactionResponse {
-  transaction: Transaction;
-  summary: UsersResponse;
-}
-
-export interface SettleRequest {
-  fromUserId: string;
-  toUserId: string;
-  amount: string;
-}
-
-export interface SettleResponse {
-  settlement: Transaction;
-  summary: UsersResponse;
-}
-
-export interface SummaryResponse {
-  userId: string;
-  walletBalance: number;
-  budgetByCategory: {
-    food: number;
-    groceries: number;
-    transport: number;
-    entertainment: number;
-    other: number;
-  };
-  netPosition: {
-    owes: string | null;
-    amount: number;
-  };
-}
-
-export interface WhoOwesWhoResponse {
-  owes: string | null;
-  to: string | null;
-  amount: number;
-}
-
-// Custom error class for API errors
+// API Error class with better error handling
 export class APIError extends Error {
   public status: number;
   public problemDetails?: ProblemDetails;
@@ -104,118 +24,129 @@ export class APIError extends Error {
     this.status = status;
     this.problemDetails = problemDetails;
   }
+
+  getDisplayMessage(): string {
+    if (this.problemDetails?.title && this.problemDetails?.detail) {
+      return `${this.problemDetails.title}: ${this.problemDetails.detail}`;
+    }
+    return this.message;
+  }
 }
 
-// Generic fetch wrapper with error handling
+// Generic fetch wrapper with enhanced error handling and debug logging
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
 
-    if (!response.ok) {
-      let problemDetails: ProblemDetails | undefined;
-      
-      try {
-        problemDetails = await response.json();
-      } catch {
-        // If response is not JSON, create a basic problem details object
-        problemDetails = {
-          type: 'unknown-error',
-          title: `HTTP ${response.status}`,
-          detail: response.statusText,
-          status: response.status,
-        };
-      }
+  // Merge headers ONCE and set them last so they cannot be overwritten
+  const finalHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> | undefined),
+  };
 
-      throw new APIError(
-        problemDetails?.detail || `HTTP ${response.status}: ${response.statusText}`,
-        response.status,
-        problemDetails
-      );
+  // Build final options: spread options first, then set headers
+  const finalOptions: RequestInit = {
+    ...options,
+    headers: finalHeaders,
+  };
+
+  if (DEBUG_HTTP) {
+    console.log(`🚀 API Request: ${finalOptions.method || 'GET'} ${url}`);
+    console.log('📤 Headers:', finalHeaders);
+    if (finalOptions.body) console.log('📤 Body:', finalOptions.body);
+  }
+
+  const response = await fetch(url, finalOptions);
+
+  if (DEBUG_HTTP) {
+    console.log(`📥 Response: ${response.status} ${response.statusText}`);
+  }
+
+  if (!response.ok) {
+    let problemDetails: ProblemDetails | undefined;
+    try {
+      problemDetails = await response.json();
+      if (DEBUG_HTTP) console.log('📥 Error Response:', problemDetails);
+    } catch {
+      problemDetails = {
+        type: 'unknown-error',
+        title: `HTTP ${response.status}`,
+        detail: response.statusText,
+        status: response.status,
+      };
     }
-
-    return await response.json();
-  } catch (error) {
-    if (error instanceof APIError) {
-      throw error;
-    }
-    
-    // Network errors or other fetch errors
     throw new APIError(
-      error instanceof Error ? error.message : 'Network error',
-      0
+      problemDetails?.detail || `HTTP ${response.status}: ${response.statusText}`,
+      response.status,
+      problemDetails
     );
   }
+
+  const data = await response.json();
+  if (DEBUG_HTTP) console.log('📥 Success Response:', data);
+  return data;
 }
 
-// API client functions
+// API object with all endpoints
 export const api = {
   // Health check
-  getHealth(): Promise<HealthResponse> {
-    return apiRequest<HealthResponse>('/health');
+  async getHealth() {
+    return apiRequest<{ status: string; timestamp: string; service: string; version: string }>('/health');
   },
 
   // Get all users
-  getUsers(): Promise<UsersResponse> {
-    return apiRequest<UsersResponse>('/users');
+  async getUsers() {
+    return apiRequest<{ users: any[]; netDue: { owes: string | null; amount: number } }>('/users');
   },
 
-  // Create a transaction
-  createTransaction(
-    data: CreateTransactionRequest,
-    idempotencyKey?: string
-  ): Promise<CreateTransactionResponse> {
+  // Create transaction with validation
+  async createTransaction(data: CreateTransactionRequest, idempotencyKey?: string) {
+    // Validate data before sending
+    const validatedData = CreateTransactionSchema.parse(data);
+    
     const headers: Record<string, string> = {};
     if (idempotencyKey) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
 
-    return apiRequest<CreateTransactionResponse>('/transactions', {
+    return apiRequest<{ transaction: any; summary: any }>('/transactions', {
       method: 'POST',
+      body: JSON.stringify(validatedData),
       headers,
-      body: JSON.stringify(data),
     });
   },
 
   // Get all transactions
-  getTransactions(): Promise<Transaction[]> {
-    return apiRequest<Transaction[]>('/transactions');
+  async getTransactions() {
+    return apiRequest<any[]>('/transactions');
   },
 
-  // Settle debt between users
-  settle(
-    data: SettleRequest,
-    idempotencyKey?: string
-  ): Promise<SettleResponse> {
+  // Settle debt with validation
+  async settle(data: SettlementRequest, idempotencyKey?: string) {
+    // Validate data before sending
+    const validatedData = SettlementSchema.parse(data);
+    
     const headers: Record<string, string> = {};
     if (idempotencyKey) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
 
-    return apiRequest<SettleResponse>('/settle', {
+    return apiRequest<{ settlement: any; summary: any }>('/settle', {
       method: 'POST',
+      body: JSON.stringify(validatedData),
       headers,
-      body: JSON.stringify(data),
     });
   },
 
   // Get user summary
-  getSummary(userId: string): Promise<SummaryResponse> {
-    return apiRequest<SummaryResponse>(`/summary?userId=${userId}`);
+  async getSummary(userId: string) {
+    return apiRequest<any>(`/summary?userId=${userId}`);
   },
 
-  // Get who owes who
-  getWhoOwesWho(): Promise<WhoOwesWhoResponse> {
-    return apiRequest<WhoOwesWhoResponse>('/who-owes-who');
+  // Get debt status
+  async getWhoOwesWho() {
+    return apiRequest<{ owes: string | null; to: string | null; amount: number }>('/who-owes-who');
   },
 };

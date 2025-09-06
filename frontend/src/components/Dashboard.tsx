@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { api, SummaryResponse, WhoOwesWhoResponse } from '../lib/api';
+import { api } from '../lib/api';
 
 export function Dashboard() {
   const [loading, setLoading] = useState(false);
-  const [userASummary, setUserASummary] = useState<SummaryResponse | null>(null);
-  const [userBSummary, setUserBSummary] = useState<SummaryResponse | null>(null);
-  const [debtStatus, setDebtStatus] = useState<WhoOwesWhoResponse | null>(null);
+  const [userASummary, setUserASummary] = useState<any | null>(null);
+  const [userBSummary, setUserBSummary] = useState<any | null>(null);
+  const [debtStatus, setDebtStatus] = useState<any | null>(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -47,12 +47,12 @@ export function Dashboard() {
     }).format(amount);
   };
 
-  const renderBudgetCategories = (budgetByCategory: SummaryResponse['budgetByCategory']) => {
+  const renderBudgetCategories = (budgetByCategory: any) => {
     return Object.entries(budgetByCategory).map(([category, amount]) => (
       <div key={category} className="flex justify-between items-center py-1">
         <span className="text-sm text-gray-600 capitalize">{category}</span>
         <span className="text-sm font-medium text-gray-900">
-          {formatCurrency(amount)}
+          {formatCurrency(amount as number)}
         </span>
       </div>
     ));

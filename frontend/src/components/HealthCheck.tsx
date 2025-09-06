@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { api, HealthResponse } from '../lib/api';
+import { api } from '../lib/api';
 
 export function HealthCheck() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [health, setHealth] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 

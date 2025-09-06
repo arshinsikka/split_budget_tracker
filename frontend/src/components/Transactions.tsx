@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { api, Transaction, CreateTransactionRequest } from '../lib/api';
+import { api } from '../lib/api';
+import { CreateTransactionSchema, type CreateTransactionRequest } from '../lib/validation';
+import { z } from 'zod';
 
 type TransactionType = 'GROUP' | 'SETTLEMENT';
 type Category = 'food' | 'groceries' | 'transport' | 'entertainment' | 'other';
@@ -12,7 +14,7 @@ interface TransactionFilters {
 }
 
 export function Transactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState<TransactionFilters>({ type: 'ALL', category: 'ALL' });
@@ -34,11 +36,11 @@ export function Transactions() {
       setTransactions(data);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      toast.error(
-        error instanceof Error 
-          ? `Failed to load transactions: ${error.message}` 
-          : 'Failed to load transactions'
-      );
+      if (error instanceof Error) {
+        toast.error(`Failed to load transactions: ${error.message}`);
+      } else {
+        toast.error('Failed to load transactions');
+      }
     } finally {
       setLoading(false);
     }
@@ -95,30 +97,34 @@ export function Transactions() {
     // Clear previous errors
     setFormErrors({});
     
-    // Validate form
-    const errors: Record<string, string> = {};
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      errors.amount = 'Amount must be greater than 0';
-    }
-    if (!formData.category) {
-      errors.category = 'Category is required';
-    }
-    
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    setSubmitting(true);
-    
     try {
+      // Parse and validate amount
+      const amount = parseFloat(formData.amount);
+      if (isNaN(amount)) {
+        setFormErrors({ amount: 'Amount must be a valid number' });
+        return;
+      }
+
+      // Round to 2 decimal places and convert to string
+      const roundedAmount = Math.round(amount * 100) / 100;
+      const amountString = roundedAmount.toFixed(2);
+
+      // Create request object
       const request: CreateTransactionRequest = {
         payerId: formData.payer,
-        amount: formData.amount,
+        amount: amountString,
         category: formData.category
       };
 
-      await api.createTransaction(request);
+      // Validate with Zod
+      CreateTransactionSchema.parse(request);
+
+      setSubmitting(true);
+      
+      // Generate idempotency key
+      const idempotencyKey = `transaction-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      await api.createTransaction(request, idempotencyKey);
       
       // Clear form and refresh transactions
       setFormData({ payer: 'A', amount: '', category: 'food' });
@@ -128,11 +134,22 @@ export function Transactions() {
       toast.success('Group expense added successfully!');
     } catch (error) {
       console.error('Failed to create transaction:', error);
-      toast.error(
-        error instanceof Error 
-          ? `Failed to add expense: ${error.message}` 
-          : 'Failed to add expense'
-      );
+      
+      if (error instanceof z.ZodError) {
+        // Handle validation errors
+        const fieldErrors: Record<string, string> = {};
+        error.issues.forEach((err: any) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setFormErrors(fieldErrors);
+        toast.error('Please fix the form errors');
+      } else if (error instanceof Error) {
+        toast.error(`Failed to add expense: ${error.message}`);
+      } else {
+        toast.error('Failed to add expense');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -146,11 +163,11 @@ export function Transactions() {
     }
   };
 
-  const renderTransactionRow = (transaction: Transaction) => {
+  const renderTransactionRow = (transaction: any) => {
     const isGroupExpense = transaction.type === 'GROUP';
     const payerReceiver = isGroupExpense 
       ? `Paid by User ${transaction.payerId}`
-      : `User ${transaction.payerId} → User ${transaction.toUserId}`;
+      : `User ${transaction.fromUserId} → User ${transaction.toUserId}`;
 
     return (
       <tr key={transaction.id} className="border-b border-gray-200 hover:bg-gray-50">

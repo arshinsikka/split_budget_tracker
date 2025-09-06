@@ -32,6 +32,40 @@ The app features a clean, minimal layout with three main views:
 - Development mode shows detailed error information
 - Graceful error recovery with refresh option
 
+## Quick Start
+
+### Option 1: Full Stack Demo (Recommended)
+
+Launch both backend and frontend with a single command:
+
+```bash
+# From the project root
+bash scripts/demo-ui.sh
+```
+
+This script will:
+- Start the backend API server on port 3000
+- Start the frontend development server on port 5173
+- Wait for both services to be ready
+- Open your browser to the frontend
+- Provide clear logs and service URLs
+
+### Option 2: Manual Setup
+
+1. **Start the backend** (from project root):
+```bash
+npm run dev
+```
+
+2. **Start the frontend** (in a new terminal):
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will be available at http://localhost:5173
+
 ## Setup
 
 1. Navigate to the frontend directory:
@@ -201,6 +235,36 @@ The Transactions page (`/transactions`) provides comprehensive transaction manag
 - **Category Filter**: Filter by specific expense categories
 - **Sort Options**: Sort by date (newest/oldest) or amount (highest/lowest)
 - **Real-time Updates**: Filters and sorting apply immediately to the displayed list
+
+## Screenshots
+
+### Dashboard
+The Dashboard provides an overview of shared expenses and current balances:
+- **User Cards**: Display wallet balances and budget breakdowns by category
+- **Debt Status Banner**: Shows who owes whom or "All settled up" status
+- **Real-time Data**: Fetches live data from the backend API
+- **Refresh Button**: Manual refresh with loading state
+
+### Transactions
+The Transactions page manages all shared expenses and settlements:
+- **Transaction Table**: Lists all transactions with type, payer/receiver, category, amount, and date
+- **Filtering & Sorting**: Filter by type and category, sort by date or amount
+- **Add Group Expense Form**: Create new group expenses with validation
+- **Currency Formatting**: All amounts displayed in SGD with 2 decimal places
+
+### Settlement
+The Settlement page handles debt payments between users:
+- **Current Debt Status**: Shows outstanding debt and maximum settlement amount
+- **Settlement Form**: Record payments with validation for self-settlement and over-settlement
+- **Idempotency Protection**: Prevents duplicate submissions
+- **Success Feedback**: Toast notifications and automatic data refresh
+
+### Error Handling
+Comprehensive error handling throughout the application:
+- **Error Boundary**: Catches JavaScript errors with user-friendly fallback UI
+- **Toast Notifications**: API errors displayed as toast messages
+- **Form Validation**: Real-time validation with inline error messages
+- **Loading States**: Skeleton animations and spinners during API calls
 
 ## Backend Integration
 
