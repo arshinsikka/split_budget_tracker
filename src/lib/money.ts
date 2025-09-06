@@ -56,6 +56,11 @@ export function validateAmount(value: number): void {
       throw new Error('Amount must have at most 2 decimal places');
     }
   }
+  
+  // Additional check for very small amounts that might cause floating-point issues
+  if (value < 0.01) {
+    throw new Error('Amount too small (minimum 0.01)');
+  }
 }
 
 /**
@@ -81,9 +86,17 @@ export function splitEqually(totalAmount: number): {
   // Convert to cents to avoid floating point precision issues
   const totalCents = Math.round(totalAmount * 100);
   const halfCents = Math.floor(totalCents / 2);
-  const perUserShare = halfCents / 100;
   const remainderCents = totalCents - halfCents * 2;
+  
+  // Ensure we return exact cent values
+  const perUserShare = halfCents / 100;
   const remainder = remainderCents / 100;
+
+  // Verify the math is correct
+  const reconstructed = perUserShare * 2 + remainder;
+  if (Math.abs(reconstructed - totalAmount) > 0.001) {
+    throw new Error(`Split calculation error: ${perUserShare} * 2 + ${remainder} = ${reconstructed}, expected ${totalAmount}`);
+  }
 
   return { perUserShare, remainder };
 }

@@ -165,7 +165,7 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
 
   // Verify transaction is balanced
   const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
-  if (Math.abs(totalDelta) > 0.01) {
+  if (Math.abs(totalDelta) > 0.001) { // Increased tolerance for floating-point precision
     throw new Error(
       `Transaction not balanced: total delta = ${totalDelta}`
     );
@@ -259,7 +259,7 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
 
   // Verify transaction is balanced
   const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
-  if (Math.abs(totalDelta) > 0.01) {
+  if (Math.abs(totalDelta) > 0.001) { // Increased tolerance for floating-point precision
     throw new Error(
       `Transaction not balanced: total delta = ${totalDelta}`
     );
@@ -281,7 +281,7 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
 export function validateLedgerEntries(entries: LedgerEntry[]): boolean {
   // Check balance
   const totalDelta = entries.reduce((sum, entry) => sum + entry.delta, 0);
-  if (Math.abs(totalDelta) > 0.01) {
+  if (Math.abs(totalDelta) > 0.001) { // Increased tolerance for floating-point precision
     throw new Error(
       `Transaction not balanced: total delta = ${totalDelta}`
     );

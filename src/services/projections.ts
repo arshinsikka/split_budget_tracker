@@ -94,7 +94,7 @@ export function computeNetDue(entries: LedgerEntry[]): NetDue {
   // If negative: A owes B (B has a receivable from A)
   const netDue = dueFromAToB - dueFromBToA;
 
-  if (Math.abs(netDue) < 0.01) {
+  if (Math.abs(netDue) < 0.001) { // Increased tolerance for floating-point precision
     // Balanced
     return { owes: null, amount: 0 };
   } else if (netDue > 0) {
