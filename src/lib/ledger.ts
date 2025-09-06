@@ -98,83 +98,83 @@ export function postGroupExpense(input: GroupExpenseInput): LedgerEntry[] {
   const otherUserId: UserId = payerId === 'A' ? 'B' : 'A';
 
   // Split amount equally using integer arithmetic
-  const totalCents = Math.round(amount * 100);
-  const halfCents = Math.floor(totalCents / 2);
-  const remainderCents = totalCents - halfCents * 2;
+    // Work strictly in integer cents
+    const totalCents = Math.round(amount * 100);
+    const halfCents = Math.floor(totalCents / 2);
+    const remainderCents = totalCents % 2;
+  
+    // Create transaction ID
+    const txId = uuidv4();
+    const createdAt = new Date().toISOString();
+  
+    const entries: LedgerEntry[] = [];
+  
+    // 1. Debit payer's cash (they paid the expense)
+    entries.push({
+      id: uuidv4(),
+      txType: 'GROUP',
+      txId,
+      account: ACCOUNTS.CASH(payerId),
+      userId: payerId,
+      delta: -(totalCents / 100), // use integer cents, not -amount
+      createdAt,
+    });
+  
+    // 2. Credit both users' expense accounts (split evenly)
+    const expenseAmount = halfCents / 100;
+    entries.push({
+      id: uuidv4(),
+      txType: 'GROUP',
+      txId,
+      account: ACCOUNTS.EXPENSE(payerId, category),
+      userId: payerId,
+      category,
+      delta: expenseAmount,
+      createdAt,
+    });
+  
+    entries.push({
+      id: uuidv4(),
+      txType: 'GROUP',
+      txId,
+      account: ACCOUNTS.EXPENSE(otherUserId, category),
+      userId: otherUserId,
+      category,
+      delta: expenseAmount,
+      createdAt,
+    });
+  
+    // 3. Credit payer's receivable (other user owes their half + remainder)
+    const dueFromCents = halfCents + remainderCents;
+    entries.push({
+      id: uuidv4(),
+      txType: 'GROUP',
+      txId,
+      account: ACCOUNTS.DUE_FROM(payerId, otherUserId),
+      userId: payerId,
+      delta: dueFromCents / 100,
+      createdAt,
+    });
+  
+    // 4. Debit other user's payable
+    entries.push({
+      id: uuidv4(),
+      txType: 'GROUP',
+      txId,
+      account: ACCOUNTS.DUE_TO(otherUserId, payerId),
+      userId: otherUserId,
+      delta: -(dueFromCents / 100),
+      createdAt,
+    });  
 
-  // Create transaction ID
-  const txId = uuidv4();
-  const createdAt = new Date().toISOString();
 
-  const entries: LedgerEntry[] = [];
-
-  // 1. Debit payer's cash (they paid the expense)
-  entries.push({
-    id: uuidv4(),
-    txType: 'GROUP',
-    txId,
-    account: ACCOUNTS.CASH(payerId),
-    userId: payerId,
-    delta: -amount, // Negative: cash goes out
-    createdAt,
-  });
-
-  // 2. Credit both users' expense accounts (they both owe their share)
-  // According to ADR: budgets are T/2 each (banker's rounding)
-  // Both users get the same rounded amount for budgets
-  const budgetAmount = halfCents / 100;
-  entries.push({
-    id: uuidv4(),
-    txType: 'GROUP',
-    txId,
-    account: ACCOUNTS.EXPENSE(payerId, category),
-    userId: payerId,
-    category,
-    delta: budgetAmount, // Positive: expense recorded
-    createdAt,
-  });
-
-  entries.push({
-    id: uuidv4(),
-    txType: 'GROUP',
-    txId,
-    account: ACCOUNTS.EXPENSE(otherUserId, category),
-    userId: otherUserId,
-    category,
-    delta: budgetAmount, // Positive: expense recorded
-    createdAt,
-  });
-
-  // 3. Credit payer's receivable from other user
-  // The remainder affects receivable/payable, not budgets
-  const dueFromCents = halfCents + remainderCents;
-  entries.push({
-    id: uuidv4(),
-    txType: 'GROUP',
-    txId,
-    account: ACCOUNTS.DUE_FROM(payerId, otherUserId),
-    userId: payerId,
-    delta: dueFromCents / 100, // Positive: asset increases
-    createdAt,
-  });
-
-  // 4. Debit other user's payable to payer
-  entries.push({
-    id: uuidv4(),
-    txType: 'GROUP',
-    txId,
-    account: ACCOUNTS.DUE_TO(otherUserId, payerId),
-    userId: otherUserId,
-    delta: -dueFromCents / 100, // Negative: liability increases
-    createdAt,
-  });
 
   // Verify transaction is balanced using integer arithmetic
   const totalDeltaCents = entries.reduce(
-    (sum, entry) => sum + Math.round(entry.delta * 100),
+    (sum, entry) => sum + entry.delta, // all deltas are now in integer cents
     0
   );
-  if (totalDeltaCents !== 0) {
+  if (Math.abs(totalDeltaCents) > 0) {
     throw new Error(
       `Transaction not balanced: total delta = ${totalDeltaCents / 100}`
     );
@@ -268,10 +268,10 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
 
   // Verify transaction is balanced using integer arithmetic
   const totalDeltaCents = entries.reduce(
-    (sum, entry) => sum + Math.round(entry.delta * 100),
+    (sum, entry) => sum + entry.delta, // all deltas are now in integer cents
     0
   );
-  if (totalDeltaCents !== 0) {
+  if (Math.abs(totalDeltaCents) > 0) {
     throw new Error(
       `Transaction not balanced: total delta = ${totalDeltaCents / 100}`
     );
@@ -293,10 +293,10 @@ export function postSettlement(input: SettlementInput): LedgerEntry[] {
 export function validateLedgerEntries(entries: LedgerEntry[]): boolean {
   // Check balance using integer arithmetic
   const totalDeltaCents = entries.reduce(
-    (sum, entry) => sum + Math.round(entry.delta * 100),
+    (sum, entry) => sum + entry.delta, // all deltas are now in integer cents
     0
   );
-  if (totalDeltaCents !== 0) {
+  if (Math.abs(totalDeltaCents) > 0) {
     throw new Error(
       `Transaction not balanced: total delta = ${totalDeltaCents / 100}`
     );

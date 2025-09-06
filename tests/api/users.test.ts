@@ -124,30 +124,30 @@ describe('GET /users', () => {
     await request(app)
       .post('/settle')
       .send({
-        fromUserId: 'B',
-        toUserId: 'A',
-        amount: '30.00',
+        fromUserId: 'A',
+        toUserId: 'B',
+        amount: '10.00',
       })
       .expect(201);
 
     const response = await request(app).get('/users').expect(200);
     
-    // User A: paid 100, received 30 settlement, owes 60 for groceries
+    // User A: paid 100, paid 10 settlement, owes 60 for groceries
     const userA = response.body.users.find((u: any) => u.userId === 'A');
-    expect(userA.walletBalance).toBe(-70); // -100 + 30
+    expect(userA.walletBalance).toBe(-110); // -100 - 10
     expect(userA.budgetByCategory.food).toBe(50);
     expect(userA.budgetByCategory.groceries).toBe(60);
     
-    // User B: paid 120, paid 30 settlement, owes 50 for food
+    // User B: paid 120, received 10 settlement, owes 50 for food
     const userB = response.body.users.find((u: any) => u.userId === 'B');
-    expect(userB.walletBalance).toBe(-150); // -120 - 30
+    expect(userB.walletBalance).toBe(-110); // -120 + 10
     expect(userB.budgetByCategory.food).toBe(50);
     expect(userB.budgetByCategory.groceries).toBe(60);
     
     // Net due should be balanced after settlement
     expect(response.body.netDue).toEqual({
-      owes: 'A',
-      amount: 40, // A owes B 10 after transactions, then B settles 30 to A, so A owes B 40
+      owes: null,
+      amount: 0, // All settled up
     });
   });
 });
